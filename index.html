@@ -98,9 +98,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 <div><label class="pc-label">Daya PLN Terpasang (VA) <span id="pcSrcPln"></span></label><input class="pc-input" type="number" id="pcPln" value="16500" step="any" min="0" oninput="calcPower()"></div>
 <div><label class="pc-label">Power Factor PLN (pf) <span id="pcSrcPf"></span></label><input class="pc-input" type="number" id="pcPf" value="0.8" step="any" min="0" max="1" oninput="calcPower()"></div>
 <div><label class="pc-label">Tegangan PLN Saat Ini (V) <span id="pcSrcVoltPln"></span></label><input class="pc-input" type="number" id="pcVoltPln" value="220" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Beban AC Lain (W) <span id="pcSrcAcLain"></span></label><input class="pc-input" type="number" id="pcAcLain" value="1500" step="any" min="0" oninput="calcPower()"></div>
+<div><label class="pc-label">Beban AC Lain (W) <span id="pcSrcAcLain"></span></label><input class="pc-input" type="number" id="pcAcLain" value="0" step="any" min="0" oninput="calcPower()"></div>
 <div><label class="pc-label">Float Voltage (V) <span id="pcSrcFloat"></span></label><input class="pc-input" type="number" id="pcFloat" value="53" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">BCL (Setting) (A) <span id="pcSrcBcl"></span></label><input class="pc-input" type="number" id="pcBcl" value="10" step="any" min="0" oninput="calcPower()"></div>
+<div><label class="pc-label">BCL (Setting) (A) <span id="pcSrcBcl"></span></label><input class="pc-input" type="number" id="pcBcl" value="15" step="any" min="0" oninput="calcPower()"></div>
 <div><label class="pc-label">LVD (Setting) (V) <span id="pcSrcLvd"></span></label><input class="pc-input" type="number" id="pcLvd" value="46" step="any" min="0" oninput="calcPower()"></div>
 <div><label class="pc-label">Target Backup (jam) <span id="pcSrcTarget"></span></label><input class="pc-input" type="number" id="pcTarget" value="4" step="any" min="0" oninput="calcPower()"></div>
 <div><label class="pc-label">Suhu Ruangan (°C) <span id="pcSrcSuhu"></span></label><input class="pc-input" type="number" id="pcSuhu" value="28" step="any" oninput="calcPower()"></div>
@@ -311,11 +311,7 @@ function aiSitePower(d){
   let bank=pcRawFirst(M,"Rect1 Battery OK");
   if(bank===null||bank<0||bank>20) return null;
   let ah=100;
-  let soh=null, sohKnown=true;
-  let coef=pcRawFirst(B,"Rec1 Cap Coef");
-  if(coef!==null){ let sohv=coef<=1.5?coef*100:coef; if(sohv>0&&sohv<=100) soh=sohv; }
-  if(soh===null){ let okB=pcRawFirst(M,"Rect1 Battery OK"), nokB=pcRawFirst(M,"Rect1 Battery NOK"); if(okB!==null&&nokB!==null&&(okB+nokB)>0){ soh=okB/(okB+nokB)*100; } }
-  if(soh===null){ soh=95; sohKnown=false; }
+  let soh=95, sohKnown=false;
   let lvd=pcRawFirst(M,"Rect1 LVD Prio"); if(lvd===null) lvd=pcRawFirst(M,"Rect1 LVD Non Prio");
   let lvdKnown=true;
   if(lvd===null||lvd<35||lvd>60){ lvd=46; lvdKnown=false; }
@@ -673,15 +669,13 @@ function loadPowerFromSite(){
   if(bankHit){ setVal("pcBank",bankHit.val); pcMark("pcSrcBank",bankHit.src); filled.push("Jumlah Bank = "+pcInt(bankHit.val)+" ("+bankHit.src+")"); } else { pcMarkMiss("pcSrcBank"); }
   let ahHit={val:100, src:"Default 100Ah"};
   if(ahHit){ setVal("pcAh",ahHit.val); pcMark("pcSrcAh",ahHit.src); filled.push("Kapasitas per Bank = "+pcFmt(ahHit.val,0)+"Ah ("+ahHit.src+")"); } else { pcMarkMiss("pcSrcAh"); }
-  let sohHit=null;
-  let coef=pcRawFirst(B,"Rec1 Cap Coef"); if(coef!==null){ let sohv=coef<=1.5?coef*100:coef; if(sohv>0&&sohv<=100) sohHit={val:sohv, src:"BBT • Rec1 Cap Coef: "+pcRaw(B,"Rec1 Cap Coef")}; }
-  if(!sohHit){ let okB=pcRawFirst(M,"Rect1 Battery OK"), nokB=pcRawFirst(M,"Rect1 Battery NOK"); if(okB!==null&&nokB!==null&&(okB+nokB)>0){ let sohv=okB/(okB+nokB)*100; sohHit={val:sohv, src:"MOTI • Rect1 Battery OK "+pcInt(okB)+" / (OK "+pcInt(okB)+" + NOK "+pcInt(nokB)+")"}; } }
-  if(sohHit){ setVal("pcSoh",Math.round(sohHit.val*10)/10); pcMark("pcSrcSoh","terisi dari audit"); filled.push("SOH = "+pcFmt(sohHit.val,1)+"% ("+sohHit.src+")"); } else { pcMarkMiss("pcSrcSoh"); }
-  let bclHit=pcRawFirst(M,"BCL"); if(bclHit!==null&&bclHit>=0&&bclHit<=200){ setVal("pcBcl",bclHit); pcMark("pcSrcBcl","terisi dari audit"); filled.push("BCL = "+pcFmt(bclHit,1)+"A (MOTI • BCL)"); } else { pcMarkMiss("pcSrcBcl"); }
+  let sohHit={val:95, src:"Default 95%"};
+  setVal("pcSoh",95); pcMark("pcSrcSoh",sohHit.src); filled.push("SOH = 95% (Default 95%)");
+  setVal("pcBcl",15); pcMark("pcSrcBcl","Default 15A"); filled.push("BCL = 15A (Default 15A)");
   let effHit=pcRawFirst(M,"Efisiensi"); if(effHit!==null&&effHit>0&&effHit<=100){ setVal("pcEff",effHit); pcMark("pcSrcEff","terisi dari audit"); filled.push("Efisiensi = "+pcFmt(effHit,1)+"% (MOTI • Efisiensi)"); } else { pcMarkMiss("pcSrcEff"); }
   let suhuHit=pcRawFirst(M,"Suhu"); if(suhuHit!==null&&suhuHit>=-10&&suhuHit<=60){ setVal("pcSuhu",suhuHit); pcMark("pcSrcSuhu","terisi dari audit"); filled.push("Suhu = "+pcFmt(suhuHit,0)+"°C (MOTI • Suhu)"); } else { pcMarkMiss("pcSrcSuhu"); }
   let pfHit=pcRawFirst(M,"Power Factor"); if(pfHit!==null&&pfHit>0&&pfHit<=1){ setVal("pcPf",pfHit); pcMark("pcSrcPf","terisi dari audit"); filled.push("Power Factor = "+pcFmt(pfHit,2)+" (MOTI • Power Factor)"); } else { pcMarkMiss("pcSrcPf"); }
-  let acHit=pcRawFirst(M,"Beban AC"); if(acHit!==null&&acHit>=0){ setVal("pcAcLain",acHit); pcMark("pcSrcAcLain","terisi dari audit"); filled.push("Beban AC Lain = "+pcInt(acHit)+"W (MOTI • Beban AC)"); } else { pcMarkMiss("pcSrcAcLain"); }
+  setVal("pcAcLain",0); pcMark("pcSrcAcLain","Default 0W"); filled.push("Beban AC Lain = 0W (Default 0W)");
   pcMarkMiss("pcSrcKoreksi"); pcMarkMiss("pcSrcTarget");
   let snapNote = isSnapshot ? "<br>⚠️ <b>Dashboard masih SNAPSHOT</b> — data detail MOTI/SITELIST belum termuat lengkap. Klik <b>Refresh Live / Coba Live Lagi</b> di HOME (banner atas) agar data detail terisi, lalu klik <b>Pakai Site Ini</b> lagi." : "";
   if(info) info.innerHTML = (d.audit?"✅ <b>"+d.id+" — "+d.name+"</b> • "+d.cls+" • "+d.kab+" • <b>Teraudit</b> • BBT1 audit "+pcFmt(d.b1jam,1)+" jam ("+d.b1+")":"⚠️ <b>"+d.id+" — "+d.name+"</b> • "+d.cls+" • "+d.kab+" • <b>Belum Audit</b> — data MOTI tidak ada, hanya Daya PLN dari SITELIST yang bisa diisi.") + snapNote;
