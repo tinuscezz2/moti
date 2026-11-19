@@ -84,26 +84,26 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 <div id="pcFloatFilled" class="pc-float-panel" style="display:none" onmouseenter="openPcFloatFilled(event)"><button type="button" class="pc-drawer-tab" onclick="openPcFloatFilled(event)" title="Terisi otomatis — hover / klik untuk lihat"><span>‹</span></button><h4><span>✅ Terisi otomatis dari Detail Site</span><button type="button" class="sec" onclick="closePcFloatFilled(event)">› Tutup</button></h4><div id="pcFloatFilledBody"></div></div>
 <h3>① INPUT</h3>
 <div class="grid2"><div><h4 style="margin:4px 0">KIRI: BATERAI + RECTIFIER + BEBAN</h4>
-<div><label class="pc-label">Jumlah Bank (bank) <span id="pcSrcBank"></span></label><input class="pc-input" type="number" id="pcBank" value="4" step="1" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Kapasitas per Bank (Ah) <span id="pcSrcAh"></span></label><input class="pc-input" type="number" id="pcAh" value="100" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">SOH Baterai (%) <span id="pcSrcSoh"></span></label><input class="pc-input" type="number" id="pcSoh" value="95" step="any" min="0" max="100" oninput="calcPower()"></div>
-<div><label class="pc-label">Jumlah Modul (modul) <span id="pcSrcModul"></span></label><input class="pc-input" type="number" id="pcModul" value="6" step="1" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Daya per Modul (W) <span id="pcSrcDayaModul"></span></label><input class="pc-input" type="number" id="pcDayaModul" value="3000" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Efisiensi Rectifier (%) <span id="pcSrcEff"></span></label><input class="pc-input" type="number" id="pcEff" value="95" step="any" min="1" max="100" oninput="calcPower()"></div>
-<div><label class="pc-label">Load DC Saat Ini (A) <span id="pcSrcLoad"></span></label><input class="pc-input" type="number" id="pcLoad" value="180" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Load Puncak Siang (A) <span id="pcSrcLoadSiang"></span></label><input class="pc-input" type="number" id="pcLoadSiang" value="190" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Load Malam (A) <span id="pcSrcLoadMalam"></span></label><input class="pc-input" type="number" id="pcLoadMalam" value="180" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Faktor Koreksi Manual (1 = normal, 0.9 = kabel panjang) <span id="pcSrcKoreksi"></span></label><input class="pc-input" type="number" id="pcKoreksi" value="1" step="any" min="0" oninput="calcPower()"></div>
+<div><label class="pc-label">Jumlah Bank (bank) <span id="pcSrcBank"></span></label><input class="pc-input" type="number" id="pcBank" value="4" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Kapasitas per Bank (Ah) <span id="pcSrcAh"></span></label><input class="pc-input" type="number" id="pcAh" value="100" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">SOH Baterai (%) <span id="pcSrcSoh"></span></label><input class="pc-input" type="number" id="pcSoh" value="95" step="any" min="0" max="100" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Jumlah Modul (modul) <span id="pcSrcModul"></span></label><input class="pc-input" type="number" id="pcModul" value="6" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Daya per Modul (W) <span id="pcSrcDayaModul"></span></label><input class="pc-input" type="number" id="pcDayaModul" value="3000" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Efisiensi Rectifier (%) <span id="pcSrcEff"></span></label><input class="pc-input" type="number" id="pcEff" value="95" step="any" min="1" max="100" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Load DC Saat Ini (A) <span id="pcSrcLoad"></span></label><input class="pc-input" type="number" id="pcLoad" value="180" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Load Puncak Siang (A) <span id="pcSrcLoadSiang"></span></label><input class="pc-input" type="number" id="pcLoadSiang" value="190" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Load Malam (A) <span id="pcSrcLoadMalam"></span></label><input class="pc-input" type="number" id="pcLoadMalam" value="180" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Faktor Koreksi Manual (1 = normal, 0.9 = kabel panjang) <span id="pcSrcKoreksi"></span></label><input class="pc-input" type="number" id="pcKoreksi" value="1" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 </div><div><h4 style="margin:4px 0">KANAN: PLN + SETTING + TARGET</h4>
-<div><label class="pc-label">Daya PLN Terpasang (VA) <span id="pcSrcPln"></span></label><input class="pc-input" type="number" id="pcPln" value="16500" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Power Factor PLN (pf) <span id="pcSrcPf"></span></label><input class="pc-input" type="number" id="pcPf" value="0.8" step="any" min="0" max="1" oninput="calcPower()"></div>
-<div><label class="pc-label">Tegangan PLN Saat Ini (V) <span id="pcSrcVoltPln"></span></label><input class="pc-input" type="number" id="pcVoltPln" value="220" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Beban AC Lain (W) <span id="pcSrcAcLain"></span></label><input class="pc-input" type="number" id="pcAcLain" value="0" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Float Voltage (V) <span id="pcSrcFloat"></span></label><input class="pc-input" type="number" id="pcFloat" value="53" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">BCL (Setting) (A) <span id="pcSrcBcl"></span></label><input class="pc-input" type="number" id="pcBcl" value="15" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">LVD (Setting) (V) <span id="pcSrcLvd"></span></label><input class="pc-input" type="number" id="pcLvd" value="46" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Target Backup (jam) <span id="pcSrcTarget"></span></label><input class="pc-input" type="number" id="pcTarget" value="4" step="any" min="0" oninput="calcPower()"></div>
-<div><label class="pc-label">Suhu Ruangan (°C) <span id="pcSrcSuhu"></span></label><input class="pc-input" type="number" id="pcSuhu" value="28" step="any" oninput="calcPower()"></div>
+<div><label class="pc-label">Daya PLN Terpasang (VA) <span id="pcSrcPln"></span></label><input class="pc-input" type="number" id="pcPln" value="16500" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Power Factor PLN (pf) <span id="pcSrcPf"></span></label><input class="pc-input" type="number" id="pcPf" value="0.8" step="any" min="0" max="1" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Tegangan PLN Saat Ini (V) <span id="pcSrcVoltPln"></span></label><input class="pc-input" type="number" id="pcVoltPln" value="220" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Beban AC Lain (W) <span id="pcSrcAcLain"></span></label><input class="pc-input" type="number" id="pcAcLain" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Float Voltage (V) <span id="pcSrcFloat"></span></label><input class="pc-input" type="number" id="pcFloat" value="53" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">BCL (Setting) (A) <span id="pcSrcBcl"></span></label><input class="pc-input" type="number" id="pcBcl" value="15" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">LVD (Setting) (V) <span id="pcSrcLvd"></span></label><input class="pc-input" type="number" id="pcLvd" value="46" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Target Backup (jam) <span id="pcSrcTarget"></span></label><input class="pc-input" type="number" id="pcTarget" value="4" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Suhu Ruangan (°C) <span id="pcSrcSuhu"></span></label><input class="pc-input" type="number" id="pcSuhu" value="28" step="any" oninput="pcManual(this);calcPower()"></div>
 <p class="small">Contoh cepat — Kondisi 3 = Bank 4, Ah 50, Modul 6×2000W, Load 81A, PLN 7700. Kondisi 1 &amp; 2 = PLN drop 170V. Hitungan POWER CALC memakai <b>Rectifier 1</b> — kalau site pakai Rectifier 2 sebagai utama, cek Detail Site lalu ubah manual.</p>
 </div></div></div>
 <div class="card"><h2>② HASIL UTAMA</h2>
@@ -452,11 +452,11 @@ function calcPower(){
   let C38 = (floatV && effF) ? Math.max(0, ((pln*pf-acLain-(load*floatV/effF))/floatV*effF)) : 0;
   let C39 = Math.min(bclSet, C38);
   let C40 = C39<=0 ? -1 : C25*0.85/C39;
-  let C41 = effF ? (load+bclSet)*floatV/effF : 0;
+  let C41 = (load+bclSet)*floatV;
   let C42 = effF ? C41/effF : 0;
   let C43 = C42+acLain;
   let C44 = (pln*pf===0) ? 0 : C43/(pln*pf)*100;
-  let C45 = (pln*pf===0 || !effF) ? 0 : (((loadSiang+bclSet)*floatV/effF/effF+acLain)/(pln*pf))*100;
+  let C45 = (pln*pf===0 || !effF) ? 0 : (((loadSiang+bclSet)*floatV/effF+acLain)/(pln*pf))*100;
   let C46 = C27 ? load*target/C27 : 0;
   let C47 = ah ? pcCeil(C46/ah) : 0;
   let C48 = Math.max(0, C47-bank);
@@ -497,7 +497,7 @@ function calcPower(){
     ["11. C-Rate", C34, "C", "Load / Bank / Ah", 2],["12. Backup Minimum", C35, "menit", "Bisa Dipakai / Load × 60", 1],
     ["13. Backup Siang", C36, "menit", "Bisa Dipakai / Load Siang × 60", 1],["14. Backup Malam", C37, "menit", "Bisa Dipakai / Load Malam × 60", 1],
     ["15. BCL Max Boleh", C38, "A", "Sisa PLN → A", 1],["16. BCL Efektif", C39, "A", "MIN(Setting, BCL Max)", 1],
-    ["17. Isi Ulang 0-85%", C40, "jam", "Total × 0.85 / BCL Efektif", 1],["18. Daya DC Butuh", C41, "W", "(Load + BCL) × Float / Eff", 0],
+    ["17. Isi Ulang 0-85%", C40, "jam", "Total × 0.85 / BCL Efektif", 1],["18. Daya DC Butuh", C41, "W", "(Load + BCL) × Float", 0],
     ["19. Daya AC Rectifier", C42, "W", "DC / Eff", 0],["20. Total Daya AC Site", C43, "W", "AC Rectifier + AC Lain", 0],
     ["21. Utilisasi PLN", C44, "%", "Total AC / (PLN × PF) × 100", 1],["22. Utilisasi Siang", C45, "%", "Cek load puncak", 1],
     ["23. Total Ah Butuh Target", C46, "Ah", "Load × Target / Faktor", 1],["24. Bank Butuh", C47, "bank", "CEILING ke atas", 0],
@@ -511,7 +511,7 @@ function calcPower(){
     ["1. TAMBAH BATERAI", C48===0 ? "Tidak perlu tambah baterai. Sudah cukup untuk target." : "TAMBAH "+pcInt(C48)+" BANK. Total jadi "+pcInt(C47)+" bank. Setelah tambah, backup jadi "+pcFmt(C55,1)+" menit."],
     ["2. TAMBAH MODUL", C51===0 ? "MODUL CUKUP, tidak usah tambah." : "TAMBAH "+pcInt(C51)+" MODUL. Total jadi "+pcInt(C50)+" modul."],
     ["3. UPGRADE PLN", C53<=pln ? "PLN CUKUP, tidak usah upgrade." : "UPGRADE PLN ke "+pcInt(C53)+" VA. Sekarang "+pcInt(pln)+" VA."],
-    ["4. SETTING DIUBAH", C53<=pln ? "Setting BCL tetap "+pcInt(bclSet)+"A. Cek Jumlah Bank = "+pcInt(bank)+" bank." : "UBAH SETTING: BCL -> "+pcFmt(C54,1)+"A, Jumlah Bank -> "+pcInt(C47)+" bank, Float tetap "+pcFmt(floatV,1)+"V, LVD tetap "+pcInt(lvd)+"V."],
+    ["4. SETTING DIUBAH", C53<=pln ? "Setting BCL tetap "+pcInt(bclSet)+"A. Cek Jumlah Bank = "+pcInt(bank)+" bank." : "SETELAH UPGRADE PLN ke "+pcInt(C53)+" VA, BARU UBAH SETTING: BCL -> "+pcFmt(C54,1)+"A, Jumlah Bank -> "+pcInt(C47)+" bank, Float tetap "+pcFmt(floatV,1)+"V, LVD tetap "+pcInt(lvd)+"V. Jangan naikkan BCL sebelum PLN di-upgrade."],
     ["5. BMS", "Tidak perlu tambah BMS. Cek komunikasi RS485/CAN baterai ke controller. Kalau ada bank tidak terbaca, cek kabel & alamat bank."],
     ["6. PLN DROP / SUHU", (voltPln>=200 && suhu<=35) ? "PLN & suhu normal." : (voltPln<200 ? "PLN DROP ke "+pcInt(voltPln)+"V — Rectifier derating "+pcFmt(C30,2)+"x. Cek MCB, kabel SR, grounding. " : "") + (suhu>35 ? "Suhu "+pcInt(suhu)+"C — Derating "+pcFmt(C31,2)+"x. Cek AC ruangan." : "")]];
   let sr=document.getElementById("pcSaran");
@@ -577,7 +577,7 @@ function pcParseModulW(str){
 function pcRaw(raw,...names){ if(!raw) return "—"; return getRaw(raw,...names); }
 function pcRawFirst(raw,...names){ return pcParseNum(pcRaw(raw,...names)); }
 function pcMark(id, label){ let el=document.getElementById(id); if(el) el.innerHTML='<span class="pc-filled">● '+label+'</span>'; }
-function pcMarkMiss(id){ let el=document.getElementById(id); if(el) el.innerHTML='<span class="pc-missing">○ data kosong</span>'; }
+function pcMarkMiss(id){ let el=document.getElementById(id); if(el) el.innerHTML='<span class="pc-missing">○ data kosong</span>'; } function pcManual(el){ let srcId="pcSrc"+el.id.slice(2); let sEl=document.getElementById(srcId); if(sEl) sEl.innerHTML='<span style="color:#b45309">● diubah manual</span>'; }
 function clearPowerSiteMarks(){
   ["pcSrcBank","pcSrcAh","pcSrcSoh","pcSrcModul","pcSrcDayaModul","pcSrcEff","pcSrcLoad","pcSrcLoadSiang","pcSrcLoadMalam","pcSrcKoreksi","pcSrcPln","pcSrcPf","pcSrcVoltPln","pcSrcAcLain","pcSrcFloat","pcSrcBcl","pcSrcLvd","pcSrcTarget","pcSrcSuhu"].forEach(id=>{ let el=document.getElementById(id); if(el) el.textContent=""; });
   window._pcSite=null; window._pcSiteAuditJam=null;
