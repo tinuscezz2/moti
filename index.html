@@ -86,8 +86,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 <div class="card"><h2>① HASIL UTAMA</h2>
 <div class="grid4"><div class="pc-kpi"><span>TOTAL BACKUP</span><b id="pcOutBackup">-</b></div><div class="pc-kpi"><span>BACKUP TAHAP 1</span><b id="pcOutBackupSiang">-</b></div><div class="pc-kpi"><span>BACKUP TAHAP 2</span><b id="pcOutBackupMalam">-</b></div><div class="pc-kpi"><span>TARGET</span><b id="pcOutTarget">-</b></div></div><br>
 <div class="grid4"><div class="pc-kpi"><span>UTILISASI PLN</span><b id="pcOutUtil">-</b></div><div class="pc-kpi"><span>SISA CHARGE PEAK</span><b id="pcOutSisa">-</b></div><div class="pc-kpi"><span>SISA CHARGE AVG</span><b id="pcOutBclMax">-</b></div><div class="pc-kpi"><span>ISI ULANG (OPSI A)</span><b id="pcOutIsiUlang">-</b></div></div><br>
-<h3 class="collapsible-head" onclick="toggleSection('pcHasilDetail','pcHasilArrow')" style="margin:8px 0 0;padding:10px 12px;background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;cursor:pointer;font-size:14px">💡 SARAN & STATUS — klik untuk lihat <span id="pcHasilArrow" style="float:right">▶</span></h3>
-<div id="pcHasilDetail" style="display:none"><div id="pcSaranCard" style="margin-top:10px;border-top:1px solid #E5E7EB;padding-top:12px"><h3 style="margin:0 0 8px">💡 SARAN PERBAIKAN — OTOMATIS, URUTAN PRIORITAS</h3><table><tbody id="pcSaran"></tbody></table><p class="small">Contoh 2 kondisi: ① PLN 10600, 5×2000W, 8 bank 100Ah, Load 178A, PLN 170V • ② PLN 10600, 6×3000W, 7 bank 100Ah, Load 180A, PLN 170V.</p></div>
+<h3 class="collapsible-head" onclick="toggleSection('pcHasilDetail','pcHasilArrow')" style="margin:8px 0 0;padding:10px 12px;background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;cursor:pointer;font-size:14px"><span>💡 SARAN & STATUS untuk <span id="pcSaranSite">-</span> — klik untuk lihat</span><span id="pcHasilArrow">▶</span></h3>
+<div id="pcHasilDetail" style="display:none"><div id="pcSaranCard" style="margin-top:10px;padding-top:2px"><table><tbody id="pcSaran"></tbody></table><p class="small">Contoh 2 kondisi: ① PLN 10600, 5×2000W, 8 bank 100Ah, Load 178A, PLN 170V • ② PLN 10600, 6×3000W, 7 bank 100Ah, Load 180A, PLN 170V.</p></div>
 <div class="pc-status warn" id="pcStatusAman">-</div><div class="pc-status warn" id="pcStatusTarget">-</div><p class="small" id="pcSiteCompare"></p></div></div>
 
 <div class="card">
@@ -556,7 +556,7 @@ function calcPower(){
     ["1. TAMBAH BATERAI", tambahBank===0 ? "Tidak perlu tambah baterai. Sudah cukup untuk target." : "TAMBAH "+pcInt(tambahBank)+" BANK. Total jadi "+pcFmt(totalAhAfter,0)+"Ah. Setelah tambah, backup jadi "+pcFmt(backupAfter,1)+" jam."],
     ["2. TAMBAH MODUL", modulKurang===0 ? "MODUL CUKUP, tidak usah tambah." : "TAMBAH "+pcInt(modulKurang)+" MODUL. Total jadi "+pcInt(modulButuh)+" modul (sudah +1 redundansi N+1)."],
     ["3. UPGRADE PLN", vaButuh<=pln ? "PLN CUKUP, tidak usah upgrade." : "UPGRADE PLN ke "+tarif+". Sekarang "+pcInt(pln)+" VA, butuh "+pcInt(vaButuh)+" VA saat Low Voltage "+pcFmt(voltLow,0)+"V."],
-    ["4. SETTING CSU ZTE", "Batt Cap = "+pcFmt(battCap,0)+"Ah | Opsi A: Chg Curr Coeff = "+pcFmt(coeffA,2)+"C, AC Curr Limit = "+pcFmt(acLimit,1)+"A/phase (wajib aktif) | Opsi B: Coeff = "+pcFmt(coeffB,2)+"C | Float = "+pcFmt(floatOut,1)+"V, Boost = "+pcFmt(boostV,0)+"V, LLVD = "+pcFmt(llvdSet,1)+" / 50.5V, BLVD = "+pcFmt(blvdSet,1)+" / 50.5V, AC LVD = 140V."],
+    ["4. SETTING CSU ZTE", "Batt Cap = "+pcFmt(battCap,0)+"Ah<br>Opsi A: Chg Curr Coeff = "+pcFmt(coeffA,2)+"C, AC Curr Limit = "+pcFmt(acLimit,1)+"A/phase (wajib aktif)<br>Opsi B: Coeff = "+pcFmt(coeffB,2)+"C<br>Float = "+pcFmt(floatOut,1)+"V, Boost = "+pcFmt(boostV,0)+"V, LLVD = "+pcFmt(llvdSet,1)+" / 50.5V, BLVD = "+pcFmt(blvdSet,1)+" / 50.5V, AC LVD = 140V."],
     ["5. RECHARGE", "Opsi A (AC Limit) = "+(rechargeA>=999?"999 jam — baterai tidak terisi!":pcFmt(rechargeA,1)+" jam")+" | Opsi B (BCL statis) = "+(rechargeB>=999?"999 jam":pcFmt(rechargeB,1)+" jam")+" | Charging ideal <5 jam = "+pcFmt(chargeIdeal,1)+"A."],
     ["6. PLN DROP / MODE", statusPln+" — Derating "+pcFmt(derating,2)+"x. "+modeLvd+". "+(selisih<0 ? "Alternatif tanpa tambah baterai: potong beban LLVD sebesar "+pcFmt(potongLlvd,1)+"A." : "")]];
   let sr=document.getElementById("pcSaran");
@@ -621,7 +621,7 @@ function pcMark(id, label){ let el=document.getElementById(id); if(el) el.innerH
 function pcMarkMiss(id){ let el=document.getElementById(id); if(el) el.innerHTML='<span class="pc-missing">○ data kosong</span>'; } function pcManual(el){ let srcId="pcSrc"+el.id.slice(2); let sEl=document.getElementById(srcId); if(sEl) sEl.innerHTML='<span style="color:#b45309">● diubah manual</span>'; }
 function clearPowerSiteMarks(){
   ["pcSrcBank","pcSrcAh","pcSrcSoh","pcSrcModul","pcSrcDayaModul","pcSrcEff","pcSrcLoad","pcSrcLlvdLoad","pcSrcLoadAvg","pcSrcPln","pcSrcPhase","pcSrcVoltNom","pcSrcVoltPln","pcSrcPf","pcSrcFloat","pcSrcLlvd","pcSrcLvd","pcSrcTarget"].forEach(id=>{ let el=document.getElementById(id); if(el) el.textContent=""; });
-  window._pcSite=null; window._pcSiteAuditJam=null;
+  window._pcSite=null; window._pcSiteAuditJam=null; updatePcSaranSite();
   let c=document.getElementById("pcSiteCompare"); if(c) c.textContent="";
 }
 function refreshPowerSiteList(){
@@ -630,7 +630,9 @@ function refreshPowerSiteList(){
   let rest = enriched().filter(d=>!d.audit);
   dl.innerHTML = audited.map(d=>`<option value="${d.id} — ${d.name}">${d.id} — ${d.name} • ${d.cls} • ${d.kab} • Teraudit</option>`).join("") + rest.map(d=>`<option value="${d.id} — ${d.name}">${d.id} — ${d.name} • ${d.cls} • ${d.kab} • Belum Audit</option>`).join("");
 }
+function updatePcSaranSite(){ let el=document.getElementById("pcSaranSite"); if(el) el.textContent = window._pcSite ? window._pcSite : "-"; }
 function updatePowerSiteCompare(){
+  updatePcSaranSite();
   let c=document.getElementById("pcSiteCompare"); if(!c) return;
   if(window._pcSite && window._pcSiteAuditJam!==null && window._pcSiteAuditJam!==undefined){
     let hitung=window._pcLast?window._pcLast.C35:0;
@@ -679,6 +681,7 @@ function loadPowerFromSite(){
   let isSnapshot = Object.keys(M).length<=4 && Object.keys(S).length<=4;
   clearPowerSiteMarks();
   window._pcSite=d.id+" — "+d.name;
+  updatePcSaranSite();
   window._pcSiteAuditJam = d.audit ? d.b1jam*60 : null;
   let filled=[];
   let setVal=(inputId, val)=>{ if(val!==null&&val!==undefined&&isFinite(val)){ let el=document.getElementById(inputId); if(el) el.value=val; return true; } return false; };
