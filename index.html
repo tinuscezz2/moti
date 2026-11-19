@@ -86,22 +86,25 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 <div class="card"><h2>① HASIL UTAMA</h2>
 <div class="grid4"><div class="pc-kpi"><span>TOTAL BACKUP</span><b id="pcOutBackup">-</b></div><div class="pc-kpi"><span>BACKUP TAHAP 1</span><b id="pcOutBackupSiang">-</b></div><div class="pc-kpi"><span>BACKUP TAHAP 2</span><b id="pcOutBackupMalam">-</b></div><div class="pc-kpi"><span>TARGET</span><b id="pcOutTarget">-</b></div></div><br>
 <div class="grid4"><div class="pc-kpi"><span>UTILISASI PLN</span><b id="pcOutUtil">-</b></div><div class="pc-kpi"><span>SISA CHARGE PEAK</span><b id="pcOutSisa">-</b></div><div class="pc-kpi"><span>SISA CHARGE AVG</span><b id="pcOutBclMax">-</b></div><div class="pc-kpi"><span>ISI ULANG (OPSI A)</span><b id="pcOutIsiUlang">-</b></div></div><br>
-<div class="pc-status warn" id="pcStatusAman">-</div><div class="pc-status warn" id="pcStatusTarget">-</div><p class="small" id="pcSiteCompare"></p></div>
+<h3 class="collapsible-head" onclick="toggleSection('pcHasilDetail','pcHasilArrow')" style="margin:8px 0 0;padding:10px 12px;background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;cursor:pointer;font-size:14px">💡 SARAN & STATUS — klik untuk lihat <span id="pcHasilArrow" style="float:right">▶</span></h3>
+<div id="pcHasilDetail" style="display:none"><div id="pcSaranCard" style="margin-top:10px;border-top:1px solid #E5E7EB;padding-top:12px"><h3 style="margin:0 0 8px">💡 SARAN PERBAIKAN — OTOMATIS, URUTAN PRIORITAS</h3><table><tbody id="pcSaran"></tbody></table><p class="small">Contoh 2 kondisi: ① PLN 10600, 5×2000W, 8 bank 100Ah, Load 178A, PLN 170V • ② PLN 10600, 6×3000W, 7 bank 100Ah, Load 180A, PLN 170V.</p></div>
+<div class="pc-status warn" id="pcStatusAman">-</div><div class="pc-status warn" id="pcStatusTarget">-</div><p class="small" id="pcSiteCompare"></p></div></div>
+
 <div class="card">
 <h3>② INPUT</h3>
 <div class="grid2"><div><h4 style="margin:4px 0">KIRI: BATERAI + RECTIFIER + BEBAN</h4>
-<div><label class="pc-label">Jumlah Bank (bank) <span id="pcSrcBank"></span></label><input class="pc-input" type="number" id="pcBank" value="4" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Kapasitas per Bank (Ah) <span id="pcSrcAh"></span></label><input class="pc-input" type="number" id="pcAh" value="100" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Jumlah Bank (bank) <span id="pcSrcBank"></span></label><input class="pc-input" type="number" id="pcBank" value="0" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Kapasitas per Bank (Ah) <span id="pcSrcAh"></span></label><input class="pc-input" type="number" id="pcAh" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">SOH Baterai (%) <span id="pcSrcSoh"></span></label><input class="pc-input" type="number" id="pcSoh" value="95" step="any" min="0" max="100" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Jumlah Modul (modul) <span id="pcSrcModul"></span></label><input class="pc-input" type="number" id="pcModul" value="6" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Jumlah Modul (modul) <span id="pcSrcModul"></span></label><input class="pc-input" type="number" id="pcModul" value="0" step="1" min="0" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">Daya per Modul (W) <span id="pcSrcDayaModul"></span></label><input class="pc-input" type="number" id="pcDayaModul" value="3000" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">Efisiensi Rectifier (%) <span id="pcSrcEff"></span></label><input class="pc-input" type="number" id="pcEff" value="94" step="any" min="1" max="100" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Total Load DC Saat Ini (A) <span id="pcSrcLoad"></span></label><input class="pc-input" type="number" id="pcLoad" value="180" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Beban Jalur LLVD / Non-Prioritas (A) <span id="pcSrcLlvdLoad"></span></label><input class="pc-input" type="number" id="pcLlvdLoad" value="60" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Load Rata-rata Harian / Untuk Recharge (A) <span id="pcSrcLoadAvg"></span></label><input class="pc-input" type="number" id="pcLoadAvg" value="150" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Total Load DC Saat Ini (A) <span id="pcSrcLoad"></span></label><input class="pc-input" type="number" id="pcLoad" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Beban Jalur LLVD / Non-Prioritas (A) <span id="pcSrcLlvdLoad"></span></label><input class="pc-input" type="number" id="pcLlvdLoad" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Load Rata-rata Harian / Untuk Recharge (A) <span id="pcSrcLoadAvg"></span></label><input class="pc-input" type="number" id="pcLoadAvg" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 </div><div><h4 style="margin:4px 0">KANAN: PLN + SETTING + TARGET</h4>
-<div><label class="pc-label">Daya Kontrak PLN (VA) <span id="pcSrcPln"></span></label><input class="pc-input" type="number" id="pcPln" value="10600" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
-<div><label class="pc-label">Jumlah Phase PLN <span id="pcSrcPhase"></span></label><input class="pc-input" type="number" id="pcPhase" value="3" step="1" min="1" max="3" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Daya Kontrak PLN (VA) <span id="pcSrcPln"></span></label><input class="pc-input" type="number" id="pcPln" value="0" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
+<div><label class="pc-label">Jumlah Phase PLN <span id="pcSrcPhase"></span></label><input class="pc-input" type="number" id="pcPhase" value="0" step="1" min="1" max="3" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">Tegangan Nominal PLN L-N (V) <span id="pcSrcVoltNom"></span></label><input class="pc-input" type="number" id="pcVoltNom" value="220" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">Tegangan Aktual Terendah / Low Voltage (V) <span id="pcSrcVoltPln"></span></label><input class="pc-input" type="number" id="pcVoltPln" value="175" step="any" min="0" oninput="pcManual(this);calcPower()"></div>
 <div><label class="pc-label">Power Factor / Cos Phi <span id="pcSrcPf"></span></label><input class="pc-input" type="number" id="pcPf" value="0.9" step="any" min="0" max="1" oninput="pcManual(this);calcPower()"></div>
@@ -112,8 +115,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 <p class="small">Rumus POWER CALC = Excel <b>Kalkulator BCL, LVD Dinamis, Low Voltage PLN &amp; Target Backup — Rectifier ZTE</b> (B6–B77). Ubah hanya input di atas sesuai data site. Hitungan memakai <b>Rectifier 1</b> — kalau site pakai Rectifier 2 sebagai utama, cek Detail Site lalu ubah manual.</p>
 </div></div></div>
 <div class="card" id="pcDetailCard"><h2 class="collapsible-head" onclick="toggleSection('pcDetailBody','pcDetailArrow')">③ DETAIL HITUNG <span id="pcDetailArrow">▶</span></h2><div id="pcDetailBody" style="display:none;overflow:auto"><table><thead><tr><th>Item Hitung</th><th>Hasil</th><th>Satuan</th></tr></thead><tbody id="pcDetail"></tbody></table></div></div>
-<div class="card pc-float-saran" id="pcSaranCard" onmouseenter="openPcSaran(event)"><button type="button" class="pc-drawer-tab saran" onclick="openPcSaran(event)" title="Saran Perbaikan — hover / klik untuk lihat"><span>‹</span></button><h2>SARAN PERBAIKAN — OTOMATIS, URUTAN PRIORITAS <button type="button" class="sec" style="float:right;font-size:12px;padding:4px 8px" onclick="closePcSaran(event)">› Sembunyikan</button></h2><table><tbody id="pcSaran"></tbody></table><p class="small">Contoh 2 kondisi: ① PLN 10600, 5×2000W, 8 bank 100Ah, Load 178A, PLN 170V • ② PLN 10600, 6×3000W, 7 bank 100Ah, Load 180A, PLN 170V.</p><button type="button" class="sec" onclick="switchView('home')">← Kembali ke Dashboard (HOME)</button></div>
+
 </div>
+<div class="card" style="text-align:left"><button type="button" class="sec" onclick="switchView('home')">← Kembali ke Dashboard (HOME)</button></div>
 <!-- ================= AI SUGGEST ================= -->
 <div class="wrap" id="viewAiSuggest" style="display:none">
 <div class="card"><h2>🤖 AI SUGGEST — Saran Otomatis</h2><p class="small">Tanya soal site. Jawaban AI dihitung dari data dashboard (SITELIST / MOTI / BBT) — setiap saran bisa dicek lewat tombol Lihat Detail / POWER CALC.</p>
@@ -562,7 +566,7 @@ function calcPower(){
 function setPowerExample(n){
   clearPowerSiteMarks(); hidePcFloatFilled(); window._pcFloatHtml=null;
   let P=[
-    {bank:8, ah:100, soh:95, modul:6, dayaModul:3000, eff:94, load:180, llvdLoad:60, loadAvg:150, pln:10600, phase:3, voltNom:220, voltPln:175, pf:0.9, floatV:53.5, llvd:46, lvd:46, target:6},
+    {bank:0, ah:0, soh:95, modul:0, dayaModul:3000, eff:94, load:0, llvdLoad:0, loadAvg:0, pln:0, phase:0, voltNom:220, voltPln:175, pf:0.9, floatV:53.5, llvd:46, lvd:46, target:6},
     {bank:8, ah:100, soh:95, modul:5, dayaModul:2000, eff:95, load:178, llvdLoad:0, loadAvg:178, pln:10600, phase:3, voltNom:220, voltPln:170, pf:0.8, floatV:53, llvd:46, lvd:46, target:4},
     {bank:7, ah:100, soh:95, modul:6, dayaModul:3000, eff:95, load:180, llvdLoad:0, loadAvg:180, pln:10600, phase:3, voltNom:220, voltPln:170, pf:0.8, floatV:53, llvd:46, lvd:46, target:4},
     {bank:4, ah:50, soh:95, modul:6, dayaModul:2000, eff:95, load:81, llvdLoad:0, loadAvg:81, pln:7700, phase:3, voltNom:220, voltPln:220, pf:0.8, floatV:53, llvd:46, lvd:46, target:4},
@@ -680,12 +684,12 @@ function loadPowerFromSite(){
   let setVal=(inputId, val)=>{ if(val!==null&&val!==undefined&&isFinite(val)){ let el=document.getElementById(inputId); if(el) el.value=val; return true; } return false; };
   let firstOf=(pairs)=>{ for(let pr of pairs){ let v=pr[0]; if(v!==null&&v!==undefined) return {val:v, src:pr[1]}; } return null; };
   let loadHit=firstOf([[pcRawFirst(M,"Rect1 Load Current"),"MOTI • Rect1 Load Current"],[pcRawFirst(B,"Rect1 Load Current"),"BBT • Rect1 Load Current"],[pcRawFirst(M,"Rect2 Load Current"),"MOTI • Rect2 Load Current"],[pcRawFirst(B,"Rect2 Load Current"),"BBT • Rect2 Load Current"],[pcRawFirst(M,"Rect3 Load Current"),"MOTI • Rect3 Load Current"]]);
-  if(loadHit&&loadHit.val>0){ setVal("pcLoad",loadHit.val); setVal("pcLoadAvg",loadHit.val); pcMark("pcSrcLoad","terisi dari audit"); pcMark("pcSrcLoadAvg","= Load (default, ubah ke rata-rata harian jika beda)"); filled.push("Total Load = "+pcFmt(loadHit.val,1)+"A ("+loadHit.src+") | Load Rata-rata = Load (default)"); } else { pcMarkMiss("pcSrcLoad"); pcMarkMiss("pcSrcLoadAvg"); }
+  if(loadHit&&loadHit.val>0){ setVal("pcLoad",loadHit.val); setVal("pcLoadAvg",loadHit.val); pcMark("pcSrcLoad","terisi dari audit"); pcMark("pcSrcLoadAvg","= Load (default, ubah ke rata-rata harian jika beda)"); filled.push("Total Load = "+pcFmt(loadHit.val,1)+"A ("+loadHit.src+") | Load Rata-rata = Load (default)"); } else { setVal("pcLoad",0); setVal("pcLoadAvg",0); pcMarkMiss("pcSrcLoad"); pcMarkMiss("pcSrcLoadAvg"); }
   let llvdLoadHit=firstOf([[pcRawFirst(M,"Rect1 LLVD Load"),"MOTI \u2022 Rect1 LLVD Load"],[pcRawFirst(M,"LLVD Load"),"MOTI \u2022 LLVD Load"],[pcRawFirst(M,"Beban LLVD"),"MOTI \u2022 Beban LLVD"],[pcRawFirst(B,"Rect1 LLVD Load"),"BBT \u2022 Rect1 LLVD Load"]]);
   if(llvdLoadHit&&llvdLoadHit.val>=0){ setVal("pcLlvdLoad",llvdLoadHit.val); pcMark("pcSrcLlvdLoad","terisi dari audit"); filled.push("Beban LLVD = "+pcFmt(llvdLoadHit.val,1)+"A ("+llvdLoadHit.src+")"); } else { setVal("pcLlvdLoad",0); pcMark("pcSrcLlvdLoad","Default 0A (LLVD = BLVD, mode serentak)"); filled.push("Beban LLVD = 0A (Default \u2014 mode serentak)"); }
   let modulHit=null;
   [["Rect1","Rect1"],["Rect2","Rect2"],["Rect3","Rect3"]].forEach(pair=>{ if(modulHit) return; let ok=pcRawFirst(M,pair[0]+" Modul OK"), nok=pcRawFirst(M,pair[0]+" Modul NOK"); let tot=(ok||0)+(nok||0); if(tot>0) modulHit={val:tot, src:"MOTI • "+pair[1]+" Modul OK "+pcInt(ok||0)+" + NOK "+pcInt(nok||0)}; });
-  if(modulHit){ setVal("pcModul",modulHit.val); pcMark("pcSrcModul","terisi dari audit"); filled.push("Jumlah Modul = "+pcInt(modulHit.val)+" ("+modulHit.src+")"); } else { pcMarkMiss("pcSrcModul"); }
+  if(modulHit){ setVal("pcModul",modulHit.val); pcMark("pcSrcModul","terisi dari audit"); filled.push("Jumlah Modul = "+pcInt(modulHit.val)+" ("+modulHit.src+")"); } else { setVal("pcModul",0); pcMarkMiss("pcSrcModul"); }
   let dayaHit=null;
   ["Rect1 Tipe","Rect2 Tipe","Rect3 Tipe"].forEach(nm=>{ if(dayaHit) return; let w=pcParseModulW(pcRaw(M,nm)); if(w) dayaHit={val:w, src:"MOTI • "+nm+": "+pcRaw(M,nm)}; });
   if(dayaHit){ setVal("pcDayaModul",dayaHit.val); pcMark("pcSrcDayaModul","terisi dari audit"); filled.push("Daya per Modul = "+pcInt(dayaHit.val)+"W ("+dayaHit.src+")"); } else { pcMarkMiss("pcDayaModul"); }
@@ -700,17 +704,17 @@ function loadPowerFromSite(){
   if(plnVS!==null) plnHit={val:plnVS, src:"SITELIST • Daya PLN: "+plnRawS};
   else { let plnRawM=pcRaw(M,"Daya MainPower"), plnVM=pcRawFirst(M,"Daya MainPower"); if(plnVM!==null) plnHit={val:plnVM, src:"MOTI • Daya MainPower: "+plnRawM}; else { let tipeM=pcRaw(M,"Tipe Mainpower"), tipeV=pcParseNum(tipeM); if(tipeV!==null) plnHit={val:tipeV, src:"MOTI • Tipe Mainpower: "+tipeM}; } }
   if(plnHit){ let v=plnHit.val; let srcTxt=plnHit.src; if(/kVA|kva/i.test(srcTxt)&&v<1000) v=v*1000; if(v>0){ setVal("pcPln",v); pcMark("pcSrcPln","terisi dari audit"); filled.push("Daya PLN = "+pcInt(v)+" VA ("+srcTxt+")"); } }
-  else { pcMarkMiss("pcSrcPln"); }
+  else { setVal("pcPln",0); pcMarkMiss("pcSrcPln"); }
   let voltHit=firstOf([[pcRawFirst(M,"Tegangan Phasa"),"MOTI • Tegangan Phasa"],[pcRawFirst(M,"Tegangan R-S-T terhadap N"),"MOTI • Tegangan R-S-T terhadap N"],[pcRawFirst(M,"ACPDBTeganganR-S-TterhadapN"),"MOTI • ACPDB Tegangan"]]);
   if(voltHit&&voltHit.val>=100&&voltHit.val<=300){ setVal("pcVoltPln",voltHit.val); pcMark("pcSrcVoltPln","terisi dari audit (Low Voltage)"); filled.push("Tegangan Aktual Terendah = "+pcFmt(voltHit.val,0)+"V ("+voltHit.src+")"); } else { pcMarkMiss("pcSrcVoltPln"); }
   setVal("pcVoltNom",220); pcMark("pcSrcVoltNom","Default 220V (nominal L-N)"); filled.push("Tegangan Nominal = 220V (Default)");
   let phaseHit=firstOf([[pcRawFirst(S,"Phase"),"SITELIST • Phase"],[pcRawFirst(M,"Phase"),"MOTI • Phase"],[pcRawFirst(M,"Jumlah Phase"),"MOTI • Jumlah Phase"]]);
-  if(phaseHit&&(phaseHit.val===1||phaseHit.val===3)){ setVal("pcPhase",phaseHit.val); pcMark("pcSrcPhase","terisi dari audit"); filled.push("Phase = "+pcInt(phaseHit.val)+" ("+phaseHit.src+")"); } else { setVal("pcPhase",3); pcMark("pcSrcPhase","Default 3 Phase"); filled.push("Phase = 3 (Default)"); }
+  if(phaseHit&&(phaseHit.val===1||phaseHit.val===3)){ setVal("pcPhase",phaseHit.val); pcMark("pcSrcPhase","terisi dari audit"); filled.push("Phase = "+pcInt(phaseHit.val)+" ("+phaseHit.src+")"); } else { setVal("pcPhase",0); pcMarkMiss("pcSrcPhase"); filled.push("Phase = 0 (belum terisi — tunggu auto dari Site ID)"); }
   let bankHit=null;
   let cfgRaw=pcRaw(M,"Rect1 Battery Config");
   let okBank=pcRawFirst(M,"Rect1 Battery OK");
   if(okBank!==null&&okBank>=0&&okBank<=20) bankHit={val:okBank, src:"MOTI • Rect1 Battery OK: "+pcRaw(M,"Rect1 Battery OK")};
-  if(bankHit){ setVal("pcBank",bankHit.val); pcMark("pcSrcBank",bankHit.src); filled.push("Jumlah Bank = "+pcInt(bankHit.val)+" ("+bankHit.src+")"); } else { pcMarkMiss("pcSrcBank"); }
+  if(bankHit){ setVal("pcBank",bankHit.val); pcMark("pcSrcBank",bankHit.src); filled.push("Jumlah Bank = "+pcInt(bankHit.val)+" ("+bankHit.src+")"); } else { setVal("pcBank",0); pcMarkMiss("pcSrcBank"); }
   let ahHit={val:100, src:"Default 100Ah"};
   if(ahHit){ setVal("pcAh",ahHit.val); pcMark("pcSrcAh",ahHit.src); filled.push("Kapasitas per Bank = "+pcFmt(ahHit.val,0)+"Ah ("+ahHit.src+")"); } else { pcMarkMiss("pcSrcAh"); }
   let sohHit={val:95, src:"Default 95%"};
