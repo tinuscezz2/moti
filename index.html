@@ -417,16 +417,25 @@ function pptShape(id,x,y,cx,cy,fill,lines,border,geom){ let paras=lines.map(L=>{
 function downloadReportPPT(){ try{
  let list=[]; try{ list=filtered(); }catch(e){ list=[]; } if(!list.length){ try{ list=enriched(); }catch(e){ list=[]; } }
  let total=list.length; let audit=list.filter(d=>d.audit).length; let belum=total-audit; let pct=total?((audit/total*100).toFixed(1)+"%"):"-";
- let bcpYa=list.filter(d=>d.bcp==="Ya").length; let bcpYaAudit=list.filter(d=>d.bcp==="Ya"&&d.audit).length; let bcpNoBackup=list.filter(d=>d.bcp==="Ya"&&d.audit&&(d.b1==="Belum Ada Data BBT"||d.b1==="Tidak Ada Backup Time")).length; let bcpPct=bcpYa?((bcpYaAudit/bcpYa*100).toFixed(1)+"%"):"-";
+ let bcpYa=list.filter(d=>d.bcp==="Ya").length; let bcpTidak=list.filter(d=>d.bcp==="Tidak").length; let bcpBelum=list.filter(d=>d.bcp==="Belum Diisi").length;
+ let bcpYaAudit=list.filter(d=>d.bcp==="Ya"&&d.audit).length; let bcpNoBackup=list.filter(d=>d.bcp==="Ya"&&d.audit&&(d.b1==="Belum Ada Data BBT"||d.b1==="Tidak Ada Backup Time")).length; let bcpPct=bcpYa?((bcpYaAudit/bcpYa*100).toFixed(1)+"%"):"-";
+ let bcpYaBelumAudit=bcpYa-bcpYaAudit;
+ let b1Counts={}; try{ b1Counts=counts(list,"b1"); }catch(e){ b1Counts={"Tidak Ada Backup Time":0,"Backup Time 1-2 Jam":0,"Backup Time 3-4 Jam":0,"Backup Time diatas 4 Jam":0,"Belum Ada Data BBT":0}; }
+ let b2Counts={}; try{ b2Counts=counts(list,"b2"); }catch(e){ b2Counts={"Tidak Ada Backup Time":0,"Backup Time 1-2 Jam":0,"Backup Time 3-4 Jam":0,"Backup Time diatas 4 Jam":0,"Belum Ada Data BBT":0}; }
+ let b1Audit=0; Object.keys(b1Counts).forEach(k=>{ b1Audit+=b1Counts[k]||0; });
+ let b1TidakAda=b1Counts["Tidak Ada Backup Time"]||0; let b1_12=b1Counts["Backup Time 1-2 Jam"]||0; let b1_34=b1Counts["Backup Time 3-4 Jam"]||0; let b1_4p=b1Counts["Backup Time diatas 4 Jam"]||0; let b1BelumData=b1Counts["Belum Ada Data BBT"]||0;
+ let b2TidakAda=b2Counts["Tidak Ada Backup Time"]||0; let b2_12=b2Counts["Backup Time 1-2 Jam"]||0; let b2_34=b2Counts["Backup Time 3-4 Jam"]||0; let b2_4p=b2Counts["Backup Time diatas 4 Jam"]||0; let b2BelumData=b2Counts["Belum Ada Data BBT"]||0;
  let base=[]; try{ base=GENSET_CURRENT_BASE||GENSET||[]; }catch(e){ base=[]; }
  let gSt=d=>{ try{ if(d.weekly && GENSET_LATEST_WEEK!=null && d.weekly[GENSET_LATEST_WEEK]!=null) return d.weekly[GENSET_LATEST_WEEK]; }catch(e){} return d.status||"-"; };
  let gTotal=base.length; let gAuto=base.filter(d=>gSt(d)==="Auto").length; let gMan=base.filter(d=>gSt(d)==="Manual").length; let gBrk=base.filter(d=>gSt(d)==="Broken").length; let gHard=base.filter(d=>gSt(d)==="Hard Broken").length; let gWeek=""; try{ gWeek=GENSET_LATEST_LABEL||"-"; }catch(e){ gWeek="-"; }
+ let gSehat=gAuto+gMan; let gRusak=gBrk+gHard;
  let now=new Date(); let tgl=now.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}); let jam=now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
- let fParts=[]; try{ if(auditFilter) fParts.push("Status: "+(auditFilter==="audit"?"Teraudit":"Belum Audit")); if(selCls&&selCls.size) fParts.push("Class: "+[...selCls].join(", ")); if(selKab&&selKab.size) fParts.push("Kab: "+[...selKab].join(", ")); if(selBCP&&selBCP.size) fParts.push("BCP: "+[...selBCP].join(", ")); if(selGenset&&selGenset.size) fParts.push("Genset: "+[...selGenset].join(", ")); if(selB1&&selB1.size) fParts.push("BBT1: "+[...selB1].join(", ")); if(selB2&&selB2.size) fParts.push("BBT2: "+[...selB2].join(", ")); let qEl=document.getElementById("qSearch"); if(qEl&&qEl.value) fParts.push('Cari: "'+qEl.value+'"'); }catch(e){}
- let filterTxt=fParts.length?fParts.join("  •  "):"Semua (tanpa filter)"; if(filterTxt.length>140) filterTxt=filterTxt.slice(0,137)+"...";
+ let fParts=[]; try{ if(auditFilter) fParts.push("Status: "+(auditFilter==="audit"?"Teraudit":"Belum Audit")); if(selCls&&selCls.size) fParts.push("Class: "+[...selCls].join(", ")); if(selKab&&selKab.size) fParts.push("Kab: "+[...selKab].join(", ")); if(selBCP&&selBCP.size) fParts.push("BCP: "+[...selBCP].join(", ")); if(selGenset&&selGenset.size) fParts.push("Genset: "+[...selGenset].join(", ")); if(selB1&&selB1.size) fParts.push("BBT1: "+[...selB1].join(", ")); if(selB2&&selB2.size) fParts.push("BBT2: "+[...selB2].join(", ")); if(selTE&&selTE.size) fParts.push("TE: "+[...selTE].join(", ")); if(selMBP&&selMBP.size) fParts.push("MBP: "+[...selMBP].join(", ")); let qEl=document.getElementById("qSearch"); if(qEl&&qEl.value) fParts.push('Cari: "'+qEl.value+'"'); }catch(e){}
+ let filterTxt=fParts.length?fParts.join("  •  "):"Semua (tanpa filter)"; if(filterTxt.length>150) filterTxt=filterTxt.slice(0,147)+"...";
  let kabMap={}; list.forEach(d=>{ if(!kabMap[d.kab]) kabMap[d.kab]={total:0,noBackup:0}; kabMap[d.kab].total++; if(d.bcp==="Ya"&&d.audit&&(d.b1==="Belum Ada Data BBT"||d.b1==="Tidak Ada Backup Time")) kabMap[d.kab].noBackup++; });
- let kabTop=Object.entries(kabMap).sort((a,b)=>b[1].total-a[1].total)[0]; let kabFokus=Object.entries(kabMap).filter(e=>e[1].noBackup>0).sort((a,b)=>b[1].noBackup-a[1].noBackup)[0];
- // ===== BULK POWER CALC — rumus sama persis dengan POWER CALC (ZTE B6-B77), target 4 jam (BCP) =====
+ let kabTop=Object.entries(kabMap).sort((a,b)=>b[1].total-a[1].total)[0];
+
+// ===== BULK POWER CALC — rumus sama persis dengan POWER CALC (ZTE B6-B77), target 4 jam (BCP) =====
  let powerList=[]; let powerHitung=0; let upList=[]; let rcList=[];
  list.filter(d=>d.audit).forEach(d=>{
    try{
@@ -472,43 +481,177 @@ function downloadReportPPT(){ try{
  let topUp=[...upList].sort((a,b)=>b.vaGap-a.vaGap).slice(0,5);
  let topRc=[...rcList].sort((a,b)=>b.modulKurang-a.modulKurang||b.vaGap-a.vaGap).slice(0,5);
  let powerPct=powerHitung?((powerNeedCount/powerHitung*100).toFixed(0)+"%"):"-";
+ 
+ // ===== DONOR / RELOKASI BATERAI — sama seperti AI SUGGEST (Ah sama, donor tetap >= 4 jam) =====
+ let donorPairs=[]; let donorDonors=0; let donorRecipients=0;
+ try{
+   if(typeof aiSitePower==="function"){
+     let withPower=list.filter(d=>d.audit).map(d=>({d:d,p:aiSitePower(d)})).filter(x=>x.p);
+     let donors=withPower.filter(x=>{ try{ return aiMaxDonatable(x.p)>=1; }catch(e){ return false; } });
+     let recipients=withPower.filter(x=>x.p.backupMin<240).sort((a,b)=>{ let sa=0,sb=0; try{ sa=(aiBackupScore(b.d)||0)+aiClassWeight(b.d.cls); }catch(e){} try{ sb=(aiBackupScore(a.d)||0)+aiClassWeight(a.d.cls); }catch(e){} return sa-sb; });
+     donorDonors=donors.length; donorRecipients=recipients.length;
+     let used=new Set();
+     for(let rec of recipients){
+       if(donorPairs.length>=3) break;
+       let best=null,bestK=0,bestFull=false;
+       donors.forEach(dn=>{
+         if(used.has(dn.d.id)||dn.d.id===rec.d.id) return;
+         if(dn.p.ah!==rec.p.ah) return;
+         let maxD=aiMaxDonatable(dn.p); let needK=aiBanksNeededFrom(rec.p, dn.p);
+         let full=needK!==null&&needK<=maxD; let k=full?needK:maxD;
+         if(!best){ best=dn; bestK=k; bestFull=full; return; }
+         let bestSame=(best.d.kab===rec.d.kab)?0:1, curSame=(dn.d.kab===rec.d.kab)?0:1;
+         if(curSame<bestSame){ best=dn; bestK=k; bestFull=full; return; }
+         if(curSame===bestSame&&full&&!bestFull){ best=dn; bestK=k; bestFull=full; return; }
+       });
+       if(best){ used.add(best.d.id); donorPairs.push({rec:rec,don:best,k:bestK,full:bestFull}); }
+     }
+   }
+ }catch(e){ donorPairs=[]; }
+ topUp=topUp.slice(0,3); topRc=topRc.slice(0,3);
  let EMU=914400;
+ let RED="C00018", GREEN="0B6E4F", BLUE="2563EB", ORANGE="EA580C", GREY="6B7280", LGREY="D9DEE3", DARK="1F2937";
+ let bar=(id,x,y,w,h,fill)=>{ if(w<=0) return ""; return pptShape(id,x,y,w,h,fill,[["",1,false,"FFFFFF"]],"","rect"); };
+ function pptHeader(pageLabel){
+   let h="";
+   h+=pptShape(2,0,0,12192000,Math.round(0.92*EMU),"C00018",[["",10,false,"FFFFFF"]],"","rect");
+   h+=pptShape(3,Math.round(0.45*EMU),Math.round(0.10*EMU),Math.round(3.60*EMU),Math.round(0.72*EMU),"C00018",[["MOTI",24,true,"FFFFFF","l",0,0],["Live  •  BBT Ternate",9,false,"FFE0E3","l",0,0]],"","rect");
+   h+=pptShape(4,Math.round(8.10*EMU),Math.round(0.10*EMU),Math.round(4.78*EMU),Math.round(0.72*EMU),"C00018",[["MOTI Summary Report",14,true,"FFFFFF","r",0,30],[tgl+"  •  "+jam+" WIT  •  "+pageLabel,9,false,"FFE0E3","r",0,0]],"","rect");
+   h+=pptShape(5,0,Math.round(0.92*EMU),12192000,Math.round(0.30*EMU),"F2F3F5",[["Filter: "+filterTxt,8,false,"6B7280","c",0,0]],"","rect");
+   return h;
+ }
+ function pptFooter(note){
+   return pptShape(99,Math.round(0.45*EMU),Math.round(6.55*EMU),Math.round(12.43*EMU),Math.round(0.30*EMU),"F2F3F5",[[note,8,false,"6B7280","c",0,0]],"","rect");
+ }
+
+
  // ---------- SLIDE 1 — RINGKASAN ----------
  let s1="";
- s1+=pptShape(2,0,0,12192000,6858000,"F2F3F5",[["",10,false,"FFFFFF"]],"","rect");
- let filterShort=filterTxt; if(filterShort.length>78) filterShort=filterShort.slice(0,75)+"...";
- s1+=pptShape(3,0,0,12192000,Math.round(1.12*EMU),"C00018",[["MOTI Live  •  Report Summary  —  1 / 2  Ringkasan",22,true,"FFFFFF","l",0,200],[""+tgl+"  •  "+jam+" WIT  •  Filter: "+filterShort,10,false,"FFE0E3","l",0,0]],"","rect");
- // 4 kartu KPI — sekarang tambah POWER
- s1+=pptShape(4,Math.round(0.50*EMU),Math.round(1.38*EMU),Math.round(2.95*EMU),Math.round(1.95*EMU),"FFFFFF",[["AUDIT",9,true,"6B7280","c",0,80],[String(total),26,true,"C00018","c",0,80],["Teraudit "+audit+"  •  "+pct,10,false,"1F2937","c",0,40],["Belum "+belum,10,false,"1F2937","c",0,0]],"D9DEE3","round");
- s1+=pptShape(5,Math.round(3.65*EMU),Math.round(1.38*EMU),Math.round(2.95*EMU),Math.round(1.95*EMU),"FFFFFF",[["BCP",9,true,"6B7280","c",0,80],[String(bcpYa),26,true,"0B6E4F","c",0,80],["Teraudit "+bcpYaAudit+"  •  "+bcpPct,10,false,"1F2937","c",0,40],["No Backup "+bcpNoBackup,10,false,"1F2937","c",0,0]],"D9DEE3","round");
- s1+=pptShape(6,Math.round(6.80*EMU),Math.round(1.38*EMU),Math.round(2.95*EMU),Math.round(1.95*EMU),"FFFFFF",[["GENSET  •  "+gWeek,9,true,"6B7280","c",0,80],[String(gTotal),26,true,"C00018","c",0,80],["Auto "+gAuto+"  •  Manual "+gMan,10,false,"1F2937","c",0,40],["Broken "+gBrk+"  •  Hard "+gHard,10,false,"1F2937","c",0,0]],"D9DEE3","round");
- s1+=pptShape(7,Math.round(9.95*EMU),Math.round(1.38*EMU),Math.round(2.88*EMU),Math.round(1.95*EMU),"FFFFFF",[["POWER  •  Target 4 Jam",9,true,"6B7280","c",0,80],[String(powerNeedCount)+" site",22,true,"C00018","c",0,80],["Upgrade Daya "+upCount+"  •  Recti "+rcCount,10,false,"1F2937","c",0,40],["Dari "+powerHitung+" terhitung",10,false,"6B7280","c",0,0]],"D9DEE3","round");
- let kabAudit2={}; list.forEach(d=>{ if(!kabAudit2[d.kab]) kabAudit2[d.kab]={t:0,a:0}; kabAudit2[d.kab].t++; if(d.audit) kabAudit2[d.kab].a++; });
- let kabRendah=null; Object.entries(kabAudit2).forEach(e=>{ if(e[1].t>=5){ let p=e[1].t?e[1].a/e[1].t:0; if(!kabRendah||p<kabRendah.p) kabRendah={n:e[0],p:p}; } });
- let fokusA=bcpNoBackup+" site BCP No Backup — perlu backup";
- let fokusB=(gBrk+gHard)+" site genset Broken / Hard — cek genset";
- let fokusC=powerNeedCount+" site perlu tindakan power ("+upCount+" upgrade daya, "+rcCount+" tambah rectifier)";
- s1+=pptShape(8,Math.round(0.50*EMU),Math.round(3.62*EMU),Math.round(6.05*EMU),Math.round(2.62*EMU),"FFFFFF",[["FOKUS UTAMA",10,true,"6B7280","l",0,280],["•  "+fokusA,11,false,"1F2937","l",0,180],["•  "+fokusB,11,false,"1F2937","l",0,180],["•  "+fokusC,11,false,"1F2937","l",0,0]],"D9DEE3","round");
- s1+=pptShape(9,Math.round(6.80*EMU),Math.round(3.62*EMU),Math.round(6.03*EMU),Math.round(2.62*EMU),"FFFFFF",[["PER KABUPATEN",10,true,"6B7280","l",0,280],["Terbanyak:  "+(kabTop?kabTop[0]+" ("+kabTop[1].total+" site)":"-"),11,false,"1F2937","l",0,180],["Fokus No Backup:  "+(kabFokus?kabFokus[0]+" ("+kabFokus[1].noBackup+")":"-"),11,false,"1F2937","l",0,180],["Audit terendah:  "+(kabRendah?kabRendah.n+" ("+(kabRendah.p*100).toFixed(0)+"%)":"-"),11,false,"1F2937","l",0,0]],"D9DEE3","round");
- s1+=pptShape(10,Math.round(0.50*EMU),Math.round(6.52*EMU),Math.round(12.33*EMU),Math.round(0.38*EMU),"F2F3F5",[["MOTI Live  •  BBT Ternate  •  Lanjut ke slide 2 untuk detail Upgrade Daya & Rectifier  •  Angka mengikuti filter di dashboard.",8,false,"6B7280","c",0,0]],"","rect");
+ s1+=pptShape(1,0,0,12192000,6858000,"F2F3F5",[["",10,false,"FFFFFF"]],"","rect");
+ s1+=pptHeader("1 / 2  •  Ringkasan");
+ // A — AUDIT
+ s1+=pptShape(10,Math.round(0.45*EMU),Math.round(1.42*EMU),Math.round(6.20*EMU),Math.round(2.42*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s1+=pptShape(11,Math.round(0.70*EMU),Math.round(1.54*EMU),Math.round(5.70*EMU),Math.round(0.28*EMU),"FFFFFF",[["A.  AUDIT  —  Teraudit vs Belum Audit",10,true,"6B7280","l",0,0]],"","rect");
+ s1+=pptShape(12,Math.round(0.70*EMU),Math.round(1.82*EMU),Math.round(5.70*EMU),Math.round(0.38*EMU),"FFFFFF",[[audit+" dari "+total+" site teraudit  •  "+pct,14,true,"C00018","l",0,0]],"","rect");
+ let aBarW=Math.round(5.70*EMU); let aGreenW=total?Math.round(aBarW*audit/total):0; let aGreyW=aBarW-aGreenW;
+ s1+=bar(13,Math.round(0.70*EMU),Math.round(2.28*EMU),aGreenW,Math.round(0.24*EMU),GREEN);
+ s1+=bar(14,Math.round(0.70*EMU)+aGreenW,Math.round(2.28*EMU),aGreyW,Math.round(0.24*EMU),LGREY);
+ s1+=pptShape(15,Math.round(0.70*EMU),Math.round(2.58*EMU),Math.round(5.70*EMU),Math.round(0.26*EMU),"FFFFFF",[["Teraudit "+audit+"   •   Belum Audit "+belum,9,false,"1F2937","l",0,0]],"","rect");
+ s1+=pptShape(16,Math.round(0.70*EMU),Math.round(2.88*EMU),Math.round(5.70*EMU),Math.round(0.70*EMU),"FFFFFF",[[belum>0? belum+" site belum audit — audit dulu agar BBT & BCP bisa dihitung. Prioritas: Class tinggi & BCP Ya." : "Semua site sudah teraudit — data BBT & BCP sudah bisa dihitung semua.",9,false,"1F2937","l",0,0]],"","rect");
+ // B — BACKUP TIME R1 (kanan atas)
+ s1+=pptShape(20,Math.round(6.85*EMU),Math.round(1.42*EMU),Math.round(6.03*EMU),Math.round(2.42*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s1+=pptShape(21,Math.round(7.10*EMU),Math.round(1.54*EMU),Math.round(5.53*EMU),Math.round(0.28*EMU),"FFFFFF",[["B.  BACKUP TIME  —  Rectifier 1  (dari "+b1Audit+" teraudit)",10,true,"6B7280","l",0,0]],"","rect");
+ let b1Cats=[["Tidak Ada",b1TidakAda,RED],["1–2 Jam",b1_12,ORANGE],["3–4 Jam",b1_34,BLUE],["Diatas 4 Jam",b1_4p,GREEN]];
+ let b1Max=Math.max(1,b1TidakAda,b1_12,b1_34,b1_4p);
+ b1Cats.forEach((c,i)=>{
+   let ry=Math.round(1.88*EMU)+i*Math.round(0.32*EMU);
+   s1+=pptShape(22+i,Math.round(7.10*EMU),ry,Math.round(1.30*EMU),Math.round(0.24*EMU),"FFFFFF",[[c[0],9,false,"1F2937","l",0,0]],"","rect");
+   let bw=Math.round(2.90*EMU)*(c[1]/b1Max);
+   s1+=bar(30+i,Math.round(8.55*EMU),ry+Math.round(0.03*EMU),bw,Math.round(0.18*EMU),c[2]);
+   s1+=pptShape(40+i,Math.round(8.55*EMU)+bw+Math.round(0.08*EMU),ry,Math.round(0.70*EMU),Math.round(0.24*EMU),"FFFFFF",[[String(c[1]),9,true,"1F2937","l",0,0]],"","rect");
+ });
+ s1+=pptShape(50,Math.round(7.10*EMU),Math.round(3.22*EMU),Math.round(5.53*EMU),Math.round(0.44*EMU),"FFFFFF",[[b1TidakAda>0? b1TidakAda+" site Tidak Ada backup — perlu backup / donor baterai." : "Tidak ada site yang Tidak Ada backup di Rectifier 1.",9,false,"1F2937","l",0,0]],"","rect");
+ // C — BCP (kiri bawah)
+ s1+=pptShape(60,Math.round(0.45*EMU),Math.round(4.00*EMU),Math.round(6.20*EMU),Math.round(2.42*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s1+=pptShape(61,Math.round(0.70*EMU),Math.round(4.12*EMU),Math.round(5.70*EMU),Math.round(0.28*EMU),"FFFFFF",[["C.  BCP SUMMARY",10,true,"6B7280","l",0,0]],"","rect");
+ s1+=pptShape(62,Math.round(0.70*EMU),Math.round(4.40*EMU),Math.round(5.70*EMU),Math.round(0.38*EMU),"FFFFFF",[["BCP Ya "+bcpYa+"  •  Teraudit "+bcpYaAudit+"  •  "+bcpPct,14,true,"0B6E4F","l",0,0]],"","rect");
+ let cBarW=Math.round(5.70*EMU); let cYaW=total?Math.round(cBarW*bcpYa/total):0; let cTidakW=total?Math.round(cBarW*bcpTidak/total):0; let cBelumW=cBarW-cYaW-cTidakW;
+ s1+=bar(63,Math.round(0.70*EMU),Math.round(4.86*EMU),cYaW,Math.round(0.24*EMU),GREEN);
+ s1+=bar(64,Math.round(0.70*EMU)+cYaW,Math.round(4.86*EMU),cTidakW,Math.round(0.24*EMU),RED);
+ s1+=bar(65,Math.round(0.70*EMU)+cYaW+cTidakW,Math.round(4.86*EMU),cBelumW,Math.round(0.24*EMU),LGREY);
+ s1+=pptShape(66,Math.round(0.70*EMU),Math.round(5.16*EMU),Math.round(5.70*EMU),Math.round(0.26*EMU),"FFFFFF",[["Ya "+bcpYa+"   •   Tidak "+bcpTidak+"   •   Belum Diisi "+bcpBelum,9,false,"1F2937","l",0,0]],"","rect");
+ s1+=pptShape(67,Math.round(0.70*EMU),Math.round(5.46*EMU),Math.round(5.70*EMU),Math.round(0.70*EMU),"FFFFFF",[["No Backup "+bcpNoBackup+" site  •  BCP Ya belum audit "+bcpYaBelumAudit+" site — audit dulu, lalu pastikan backup ≥ 4 jam.",9,false,"1F2937","l",0,0]],"","rect");
+ // D — GENSET (kanan bawah)
+ s1+=pptShape(70,Math.round(6.85*EMU),Math.round(4.00*EMU),Math.round(6.03*EMU),Math.round(2.42*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s1+=pptShape(71,Math.round(7.10*EMU),Math.round(4.12*EMU),Math.round(5.53*EMU),Math.round(0.28*EMU),"FFFFFF",[["D.  KONDISI GENSET  •  "+gWeek,10,true,"6B7280","l",0,0]],"","rect");
+ s1+=pptShape(72,Math.round(7.10*EMU),Math.round(4.40*EMU),Math.round(5.53*EMU),Math.round(0.38*EMU),"FFFFFF",[["Total "+gTotal+"  •  Sehat "+gSehat+"  •  Rusak "+gRusak,14,true,"C00018","l",0,0]],"","rect");
+ let gCats=[["Auto",gAuto,GREEN],["Manual",gMan,BLUE],["Broken",gBrk,ORANGE],["Hard Broken",gHard,RED]];
+ let gMax=Math.max(1,gAuto,gMan,gBrk,gHard);
+ gCats.forEach((c,i)=>{
+   let ry=Math.round(4.86*EMU)+i*Math.round(0.26*EMU);
+   s1+=pptShape(73+i,Math.round(7.10*EMU),ry,Math.round(1.30*EMU),Math.round(0.22*EMU),"FFFFFF",[[c[0],9,false,"1F2937","l",0,0]],"","rect");
+   let bw=Math.round(2.90*EMU)*(c[1]/gMax);
+   s1+=bar(80+i,Math.round(8.55*EMU),ry+Math.round(0.02*EMU),bw,Math.round(0.16*EMU),c[2]);
+   s1+=pptShape(90+i,Math.round(8.55*EMU)+bw+Math.round(0.08*EMU),ry,Math.round(0.70*EMU),Math.round(0.22*EMU),"FFFFFF",[[String(c[1]),9,true,"1F2937","l",0,0]],"","rect");
+ });
+ s1+=pptShape(98,Math.round(7.10*EMU),Math.round(5.94*EMU),Math.round(5.53*EMU),Math.round(0.32*EMU),"FFFFFF",[[gRusak>0? "Broken + Hard "+gRusak+" site perlu cek genset." : "Tidak ada genset Broken / Hard — semua bisa dipakai.",9,false,"1F2937","l",0,0]],"","rect");
+ s1+=pptFooter("MOTI Live  •  BBT Ternate  •  Angka mengikuti filter di dashboard  •  Lanjut ke slide 2 untuk detail power.");
  let slide1='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'+s1+'</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
- // ---------- SLIDE 2 — DETAIL POWER ----------
+
+
+ // ---------- SLIDE 2 — KONDISI POWER SITE ----------
  let s2="";
- s2+=pptShape(2,0,0,12192000,6858000,"F2F3F5",[["",10,false,"FFFFFF"]],"","rect");
- s2+=pptShape(3,0,0,12192000,Math.round(1.12*EMU),"0B6E4F",[["Detail Power  •  Upgrade Daya & Tambah Rectifier  —  2 / 2",22,true,"FFFFFF","l",0,200],["Target 4 Jam (BCP)  •  Rumus POWER CALC ZTE B6–B77  •  Dihitung dari "+powerHitung+" site teraudit (Load + PLN + Modul lengkap)",10,false,"D1FAE5","l",0,0]],"","rect");
- // 2 kartu detail power
- s2+=pptShape(4,Math.round(0.50*EMU),Math.round(1.38*EMU),Math.round(6.05*EMU),Math.round(1.95*EMU),"FFFFFF",[["HARUS UPGRADE DAYA  (PLN)",10,true,"6B7280","c",0,100],[String(upCount)+" site  •  "+(powerHitung?((upCount/powerHitung*100).toFixed(0)+"%"):"-"),20,true,"C00018","c",0,100],["Total kekurangan: +"+Math.round(totalVaGap).toLocaleString("id-ID")+" VA",11,false,"1F2937","c",0,60],["Paling banyak butuh: "+tarifTxt,10,false,"6B7280","c",0,0]],"D9DEE3","round");
- s2+=pptShape(5,Math.round(6.80*EMU),Math.round(1.38*EMU),Math.round(6.03*EMU),Math.round(1.95*EMU),"FFFFFF",[["RECTIFIER HARUS NAMBAH MODUL",10,true,"6B7280","c",0,100],[String(rcCount)+" site  •  "+(powerHitung?((rcCount/powerHitung*100).toFixed(0)+"%"):"-"),20,true,"C00018","c",0,100],["Total kurang: +"+totalModulKurang+" modul",11,false,"1F2937","c",0,60],["Overlap (butuh keduanya): "+bothCount+" site",10,false,"6B7280","c",0,0]],"D9DEE3","round");
- // Daftar top 5 — teks pendek, 1 baris per site
- let upLines=[["TOP 5 — UPGRADE DAYA TERBESAR  (PLN sekarang → butuh)",10,true,"6B7280","l",0,280]];
- if(topUp.length===0) upLines.push(["—  Tidak ada site yang perlu upgrade daya.",11,false,"1F2937","l",0,0]);
- else topUp.forEach((r,i)=>{ upLines.push([(i+1)+".  "+r.id+" — "+r.name+"  •  "+Math.round(r.pln).toLocaleString("id-ID")+" → "+Math.round(r.vaButuh).toLocaleString("id-ID")+" VA  ("+r.tarif+")",10,false,"1F2937","l",0,140]); });
- let rcLines=[["TOP 5 — TAMBAH RECTIFIER TERBANYAK",10,true,"6B7280","l",0,280]];
- if(topRc.length===0) rcLines.push(["—  Tidak ada site yang perlu tambah rectifier.",11,false,"1F2937","l",0,0]);
- else topRc.forEach((r,i)=>{ rcLines.push([(i+1)+".  "+r.id+" — "+r.name+"  •  "+r.modul+" → "+r.modulButuh+" modul  (+ "+r.modulKurang+")",10,false,"1F2937","l",0,140]); });
- s2+=pptShape(6,Math.round(0.50*EMU),Math.round(3.62*EMU),Math.round(6.05*EMU),Math.round(2.62*EMU),"FFFFFF",upLines,"D9DEE3","round");
- s2+=pptShape(7,Math.round(6.80*EMU),Math.round(3.62*EMU),Math.round(6.03*EMU),Math.round(2.62*EMU),"FFFFFF",rcLines,"D9DEE3","round");
- s2+=pptShape(8,Math.round(0.50*EMU),Math.round(6.52*EMU),Math.round(12.33*EMU),Math.round(0.38*EMU),"F2F3F5",[["Rumus:  VA butuh > PLN = Upgrade Daya  •  Modul butuh > modul terpasang = Tambah Rectifier  •  Cek per-site di POWER CALC untuk detail lengkap.",8,false,"6B7280","c",0,0]],"","rect");
+ s2+=pptShape(1,0,0,12192000,6858000,"F2F3F5",[["",10,false,"FFFFFF"]],"","rect");
+ s2+=pptHeader("2 / 2  •  Kondisi Power Site");
+ // A — BACKUP R1 & R2 (full width)
+ s2+=pptShape(10,Math.round(0.45*EMU),Math.round(1.42*EMU),Math.round(12.43*EMU),Math.round(1.48*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s2+=pptShape(11,Math.round(0.70*EMU),Math.round(1.52*EMU),Math.round(11.93*EMU),Math.round(0.28*EMU),"FFFFFF",[["A.  BACKUP TIME  —  Klasifikasi & Chart  (dari "+b1Audit+" teraudit)",10,true,"6B7280","l",0,0]],"","rect");
+ // R1 kiri
+ s2+=pptShape(12,Math.round(0.70*EMU),Math.round(1.84*EMU),Math.round(1.20*EMU),Math.round(0.24*EMU),"FFFFFF",[["Rectifier 1",9,true,"1F2937","l",0,0]],"","rect");
+ let b1Cols=[["Tidak Ada",b1TidakAda,RED],["1–2 Jam",b1_12,ORANGE],["3–4 Jam",b1_34,BLUE],["> 4 Jam",b1_4p,GREEN]];
+ let b1Max2=Math.max(1,b1TidakAda,b1_12,b1_34,b1_4p);
+ b1Cols.forEach((c,i)=>{
+   let bx=Math.round(0.70*EMU)+i*Math.round(2.85*EMU);
+   s2+=pptShape(13+i, bx, Math.round(2.10*EMU), Math.round(1.10*EMU), Math.round(0.22*EMU), "FFFFFF", [[c[0],8,false,"1F2937","l",0,0]], "", "rect");
+   let bw=Math.round(1.60*EMU)*(c[1]/b1Max2);
+   s2+=bar(20+i, bx, Math.round(2.34*EMU), bw, Math.round(0.18*EMU), c[2]);
+   s2+=pptShape(25+i, bx+bw+Math.round(0.06*EMU), Math.round(2.34*EMU), Math.round(0.50*EMU), Math.round(0.22*EMU), "FFFFFF", [[String(c[1]),9,true,"1F2937","l",0,0]], "", "rect");
+ });
+ // R2 kanan (garis pemisah + R2)
+ s2+=pptShape(30,Math.round(6.85*EMU),Math.round(1.84*EMU),Math.round(1.20*EMU),Math.round(0.24*EMU),"FFFFFF",[["Rectifier 2",9,true,"1F2937","l",0,0]],"","rect");
+ let b2Cols=[["Tidak Ada",b2TidakAda,RED],["1–2 Jam",b2_12,ORANGE],["3–4 Jam",b2_34,BLUE],["> 4 Jam",b2_4p,GREEN]];
+ let b2Max2=Math.max(1,b2TidakAda,b2_12,b2_34,b2_4p);
+ b2Cols.forEach((c,i)=>{
+   let bx=Math.round(6.85*EMU)+i*Math.round(1.45*EMU);
+   s2+=pptShape(31+i, bx, Math.round(2.10*EMU), Math.round(1.10*EMU), Math.round(0.22*EMU), "FFFFFF", [[c[0],8,false,"1F2937","l",0,0]], "", "rect");
+   let bw=Math.round(0.85*EMU)*(c[1]/b2Max2);
+   s2+=bar(40+i, bx, Math.round(2.34*EMU), bw, Math.round(0.18*EMU), c[2]);
+   s2+=pptShape(45+i, bx+bw+Math.round(0.06*EMU), Math.round(2.34*EMU), Math.round(0.40*EMU), Math.round(0.22*EMU), "FFFFFF", [[String(c[1]),9,true,"1F2937","l",0,0]], "", "rect");
+ });
+ s2+=pptShape(50,Math.round(0.70*EMU),Math.round(2.62*EMU),Math.round(11.93*EMU),Math.round(0.20*EMU),"FFFFFF",[["Target BCP: backup ≥ 4 jam.  Banyak site hanya punya 1 rectifier — BBT2 = Tidak Ada bukan berarti baterai hilang.",8,false,"6B7280","l",0,0]],"","rect");
+ // B — UPGRADE DAYA
+ s2+=pptShape(60,Math.round(0.45*EMU),Math.round(3.04*EMU),Math.round(6.20*EMU),Math.round(1.68*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s2+=pptShape(61,Math.round(0.70*EMU),Math.round(3.14*EMU),Math.round(5.70*EMU),Math.round(0.28*EMU),"FFFFFF",[["B.  SARAN UPGRADE DAYA  (PLN)",10,true,"6B7280","l",0,0]],"","rect");
+ s2+=pptShape(62,Math.round(0.70*EMU),Math.round(3.42*EMU),Math.round(5.70*EMU),Math.round(0.32*EMU),"FFFFFF",[[upCount+" site perlu upgrade  •  "+(powerHitung?((upCount/powerHitung*100).toFixed(0)+"%"):"-")+" dari "+powerHitung+" terhitung",11,true,"C00018","l",0,0]],"","rect");
+ let upLines=[];
+ if(topUp.length===0) upLines.push(["—  Tidak ada site yang perlu upgrade daya.",9,false,"1F2937","l",0,0]);
+ else topUp.forEach((r,i)=>{ upLines.push([(i+1)+".  "+r.id+" — "+r.name+"  •  "+Math.round(r.pln).toLocaleString("id-ID")+" → "+Math.round(r.vaButuh).toLocaleString("id-ID")+" VA  ("+r.tarif+")",9,false,"1F2937","l",0,120]); });
+ upLines.push(["Total kekurangan: +"+Math.round(totalVaGap).toLocaleString("id-ID")+" VA  •  Paling banyak: "+tarifTxt,8,false,"6B7280","l",0,120]);
+ s2+=pptShape(63,Math.round(0.70*EMU),Math.round(3.78*EMU),Math.round(5.70*EMU),Math.round(0.80*EMU),"FFFFFF",upLines,"","rect");
+ // C — TAMBAH / GANTI MODUL
+ s2+=pptShape(70,Math.round(6.85*EMU),Math.round(3.04*EMU),Math.round(6.03*EMU),Math.round(1.68*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s2+=pptShape(71,Math.round(7.10*EMU),Math.round(3.14*EMU),Math.round(5.53*EMU),Math.round(0.28*EMU),"FFFFFF",[["C.  SARAN TAMBAH / GANTI MODUL  (Rectifier)",10,true,"6B7280","l",0,0]],"","rect");
+ s2+=pptShape(72,Math.round(7.10*EMU),Math.round(3.42*EMU),Math.round(5.53*EMU),Math.round(0.32*EMU),"FFFFFF",[[rcCount+" site perlu tambah modul  •  +"+totalModulKurang+" modul",11,true,"C00018","l",0,0]],"","rect");
+ let rcLines=[];
+ if(topRc.length===0) rcLines.push(["—  Tidak ada site yang perlu tambah modul.",9,false,"1F2937","l",0,0]);
+ else topRc.forEach((r,i)=>{ rcLines.push([(i+1)+".  "+r.id+" — "+r.name+"  •  "+r.modul+" → "+r.modulButuh+" modul  (+"+r.modulKurang+")",9,false,"1F2937","l",0,120]); });
+ rcLines.push(["Overlap (butuh daya + modul): "+bothCount+" site  •  Cek per-site di POWER CALC.",8,false,"6B7280","l",0,120]);
+ s2+=pptShape(73,Math.round(7.10*EMU),Math.round(3.78*EMU),Math.round(5.53*EMU),Math.round(0.80*EMU),"FFFFFF",rcLines,"","rect");
+ // D — RELOKASI BATERAI
+ s2+=pptShape(80,Math.round(0.45*EMU),Math.round(4.86*EMU),Math.round(6.20*EMU),Math.round(1.56*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s2+=pptShape(81,Math.round(0.70*EMU),Math.round(4.96*EMU),Math.round(5.70*EMU),Math.round(0.28*EMU),"FFFFFF",[["D.  SARAN RELOKASI BATERAI  (Donor)",10,true,"6B7280","l",0,0]],"","rect");
+ let donorLines=[];
+ if(donorPairs.length===0) donorLines.push(["Belum ada pasangan donor yang aman.",9,true,"1F2937","l",0,80],["Donor tersedia "+donorDonors+"  •  Butuh donor "+donorRecipients+"  •  Syarat: Ah sama, donor tetap ≥ 4 jam.",8,false,"6B7280","l",0,80],["Kalau tidak ada donor, tambah bank baru / ganti baterai di site penerima.",8,false,"1F2937","l",0,0]);
+ else {
+   donorLines.push([donorPairs.length+" pasangan donor — target 4 jam kedua sisi, Ah harus sama.",9,true,"0B6E4F","l",0,80]);
+   donorPairs.forEach((pr,i)=>{ donorLines.push([(i+1)+".  "+pr.don.d.id+" → "+pr.rec.d.id+" — pindah "+pr.k+" bank × "+Math.round(pr.don.p.ah)+"Ah  "+(pr.full?"(sampai target)":"(sebagian)"),9,false,"1F2937","l",0,80]); });
+   donorLines.push(["Donor tetap ≥ 4 jam setelah donor.  Cek detail di AI SUGGEST.",8,false,"6B7280","l",0,0]);
+ }
+ s2+=pptShape(82,Math.round(0.70*EMU),Math.round(5.26*EMU),Math.round(5.70*EMU),Math.round(1.00*EMU),"FFFFFF",donorLines,"","rect");
+ // E — IMPROVEMENT
+ s2+=pptShape(90,Math.round(6.85*EMU),Math.round(4.86*EMU),Math.round(6.03*EMU),Math.round(1.56*EMU),"FFFFFF",[["",10,false,"FFFFFF"]],"D9DEE3","round");
+ s2+=pptShape(91,Math.round(7.10*EMU),Math.round(4.96*EMU),Math.round(5.53*EMU),Math.round(0.28*EMU),"FFFFFF",[["E.  SARAN IMPROVEMENT",10,true,"6B7280","l",0,0]],"","rect");
+ let imp=[];
+ if(belum>0) imp.push("Audit "+belum+" site belum audit (prioritas Class tinggi & BCP Ya).");
+ if(gRusak>0) imp.push("Perbaiki "+gRusak+" site genset Broken / Hard — cek genset & BBM.");
+ if(bcpNoBackup>0) imp.push("Backup untuk "+bcpNoBackup+" site BCP No Backup — donor / tambah bank.");
+ if(powerNeedCount>0) imp.push("Tindak power "+powerNeedCount+" site: "+upCount+" upgrade daya, "+rcCount+" tambah modul.");
+ if(donorPairs.length>0) imp.push("Jalankan relokasi "+donorPairs.length+" pasangan donor sebelum beli bank baru.");
+ if(imp.length===0) imp.push("Semua indikator sudah baik — pertahankan audit & validasi data tiap minggu.");
+ imp.push("Validasi data BBT & MOTI tiap minggu agar tidak ada data kosong.");
+ let impLines=imp.slice(0,4).map(t=>["•  "+t,9,false,"1F2937","l",0,90]);
+ s2+=pptShape(92,Math.round(7.10*EMU),Math.round(5.26*EMU),Math.round(5.53*EMU),Math.round(1.00*EMU),"FFFFFF",impLines,"","rect");
+ s2+=pptFooter("Rumus: VA butuh > PLN = Upgrade Daya  •  Modul butuh > modul terpasang = Tambah Rectifier  •  Cek per-site di POWER CALC.");
  let slide2='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'+s2+'</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
  let theme='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme"><a:themeElements><a:clrScheme name="Office"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="1F497D"/></a:dk2><a:lt2><a:srgbClr val="EEECE1"/></a:lt2><a:accent1><a:srgbClr val="4F81BD"/></a:accent1><a:accent2><a:srgbClr val="C0504D"/></a:accent2><a:accent3><a:srgbClr val="9BBB59"/></a:accent3><a:accent4><a:srgbClr val="8064A2"/></a:accent4><a:accent5><a:srgbClr val="4BACC6"/></a:accent5><a:accent6><a:srgbClr val="F79646"/></a:accent6><a:hlink><a:srgbClr val="0000FF"/></a:hlink><a:folHlink><a:srgbClr val="800080"/></a:folHlink></a:clrScheme><a:fontScheme name="Office"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme><a:fmtScheme name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="9525"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>';
  let contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/><Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/><Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/><Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>';
