@@ -463,6 +463,7 @@ function downloadReportPPT(){ try{
      let chargeIdeal=Math.max(totalAh,butuhAh)*0.16;
      let modulButuh=(dayaModul*derating>0)?pcCeil(((load+chargeIdeal)*floatV)/(dayaModul*derating)+1):0;
      let modulKurang=Math.max(0,modulButuh-modul);
+     // B76: (220/voltLow) = B8/B9, B8 nominal standar 220V (sama seperti POWER CALC saat VoltNom=220)
      let vaButuh=(effF>0&&pf>0&&voltLow>0)?(((load+chargeIdeal)*floatV)/(effF*pf))*(220/voltLow):0;
      let tarif=vaButuh<=10600?"10.600 VA":vaButuh<=13200?"13.200 VA":vaButuh<=16500?"16.500 VA":vaButuh<=23000?"23.000 VA":vaButuh<=33000?"33.000 VA":"41.500 VA";
      let needUp=vaButuh>pln; let needRc=modulKurang>0;
@@ -743,18 +744,28 @@ function aiSitePower(d){
   let lvd=pcRawFirst(M,"Rect1 LVD Prio"); if(lvd===null) lvd=pcRawFirst(M,"Rect1 LVD Non Prio");
   let lvdKnown=true;
   if(lvd===null||lvd<35||lvd>60){ lvd=46; lvdKnown=false; }
+  // LLVD untuk mode bertahap — sama seperti POWER CALC B19/B15/B16 (B62/B63)
+  let llvdSet=pcRawFirst(M,"Rect1 LVD Non Prio"); if(llvdSet===null||llvdSet<35||llvdSet>60) llvdSet=lvd;
+  let llvdLoad=pcRawFirst(M,"Rect1 LLVD Load"); if(llvdLoad===null) llvdLoad=pcRawFirst(M,"LLVD Load"); if(llvdLoad===null) llvdLoad=0;
+  let loadBlvd=Math.max(0, load-llvdLoad);
   let usable=aiUsable(bank,ah,soh,lvd);
-  return {bank:bank, ah:ah, soh:soh, sohKnown:sohKnown, load:load, lvd:lvd, lvdKnown:lvdKnown, usable:usable, backupMin:aiBackupMin(usable,load)};
+  // Backup = B62+B63, bukan usable/load saja (itu hanya benar kalau LLVD=BLVD)
+  let tahap1=(llvdSet<=lvd) ? usable/load : (usable*0.82)/load;
+  let tahap2=(llvdSet<=lvd) ? 0 : (loadBlvd>0 ? (usable*0.18)/loadBlvd : 0);
+  let backupMin=(tahap1+tahap2)*60;
+  // Usable yang dibutuhkan untuk target 4 jam — B71 x SOH x DoD = 4*Load (serentak) atau 4*0.82*Load + 4*0.18*LoadBlvd (bertahap)
+  let needUsable4=(llvdSet<=lvd) ? load*4 : (4*0.82*load + 4*0.18*loadBlvd);
+  return {bank:bank, ah:ah, soh:soh, sohKnown:sohKnown, load:load, lvd:lvd, lvdKnown:lvdKnown, llvdSet:llvdSet, llvdLoad:llvdLoad, loadBlvd:loadBlvd, usable:usable, backupMin:backupMin, needUsable4:needUsable4};
 }
 function aiMaxDonatable(p){
-  let need=p.load*4;
+  let need=(p.needUsable4!==undefined) ? p.needUsable4 : p.load*4;
   if(p.usable<need) return 0;
   let minKeep=p.bank;
   for(let b=0;b<=p.bank;b++){ if(aiUsable(b,p.ah,p.soh,p.lvd)>=need){ minKeep=b; break; } }
   return Math.max(0, p.bank-minKeep);
 }
 function aiBanksNeededFrom(rec, don){
-  let need=rec.load*4;
+  let need=(rec.needUsable4!==undefined) ? rec.needUsable4 : rec.load*4;
   let missing=need-rec.usable;
   if(missing<=0) return 0;
   let perBank=don.ah*(don.soh/100)*aiLvdFactor(rec.lvd);
@@ -864,8 +875,11 @@ function calcPower(){
   // B14 Load, B15 LLVD Load, B17 LoadAvg, B18 Float, B19 LLVD, B20 BLVD, B21 Target, B29 Bank, B59 SOH + BCL (manual, default 15 = 0.15C)
   let bank=pcNum("pcBank"), ah=pcNum("pcAh"), sohPct=pcNum("pcSoh"), bclRaw=pcNum("pcBcl"), modul=pcNum("pcModul"), dayaModul=pcNum("pcDayaModul"), effPct=pcNum("pcEff");
   let load=pcNum("pcLoad"), loadLlvd=pcNum("pcLlvdLoad"), loadAvg=pcNum("pcLoadAvg");
-  let pln=pcNum("pcPln"), phase=pcNum("pcPhase"), voltNom=pcNum("pcVoltNom"), voltLow=pcNum("pcVoltPln"), pf=pcNum("pcPf"), floatV=pcNum("pcFloat"), llvdSet=pcNum("pcLlvd"), blvdSet=pcNum("pcLvd"), target=pcNum("pcTarget");
-  if(!(phase>0)) phase=3; if(!(voltNom>0)) voltNom=220;
+  let pln=pcNum("pcPln"), phaseRaw=pcNum("pcPhase"), phase=phaseRaw, voltNom=pcNum("pcVoltNom"), voltLow=pcNum("pcVoltPln"), pf=pcNum("pcPf"), floatV=pcNum("pcFloat"), llvdSet=pcNum("pcLlvd"), blvdSet=pcNum("pcLvd"), target=pcNum("pcTarget");
+  if(!(voltNom>0)) voltNom=220; // Nominal standar PLN L-N = 220V
+  // LoadAvg: kalau 0 tapi Load ada isinya, pakai Load (rata-rata tidak mungkin 0 saat ada beban). Excel B17 = 0 akan bikin Sisa Avg kegedean.
+  let loadAvgRaw=pcNum("pcLoadAvg");
+  let loadAvgEff=(loadAvgRaw>0) ? loadAvgRaw : pcNum("pcLoad");
   let effF=effPct/100, sohF=sohPct/100;
   // B16 Beban BLVD
   let loadBlvd=Math.max(0, load-loadLlvd);
@@ -875,21 +889,25 @@ function calcPower(){
   let statusPln = voltLow<180 ? "KRITIS (Low Voltage Berat <180V)" : voltLow<198 ? "WASPADA (Low Voltage -10% s/d -18%)" : "NORMAL (198V - 242V)";
   let derating = voltLow>=180 ? 1 : Math.max(0.4, (voltLow-100)/80); // B34
   let dayaEfektifModul = dayaModul*modul*derating; // B35
-  let mcbPerPhase = (phase>0&&voltNom>0) ? pln/(phase*voltNom) : 0; // B36
+  let mcbPerPhase = (phase>0&&voltNom>0) ? pln/(phase*voltNom) : 0; // B36 — 0 kalau Phase belum diisi (jangan diasumsikan 3)
   let dayaAktifNominal = pln*pf; // B37
-  let dayaAktifAktual = mcbPerPhase*phase*voltLow*pf; // B38
+  // B38 Excel = B36*B7*B9*B10 = B6*B9*B10/B8 — Phase saling hapus, jadi hitung langsung biar tidak DIV/0 saat Phase 0
+  let dayaAktifAktual = (voltNom>0) ? (pln*voltLow*pf)/voltNom : 0; // B38
   let maxDcPln = floatV ? (dayaAktifAktual*effF)/floatV : 0; // B39
   let dayaLoad = load*floatV; // B40
   let sisaPeak = maxDcPln - load; // B41
-  let sisaAvg = Math.max(0, maxDcPln - loadAvg); // B42
+  let sisaAvg = Math.max(0, maxDcPln - loadAvgEff); // B42 — pakai LoadAvg efektif
   let util = dayaAktifAktual>0 ? dayaLoad/dayaAktifAktual*100 : 0; // Utilisasi = Daya Load / Daya Aktif Aktual
   // --- 4. SETTING CSU ZTE (B46-B54) ---
   let battCap = totalAh; // B46
   if(!(bclRaw>0)) bclRaw=15; let bclCoeff = bclRaw>1 ? bclRaw/100 : bclRaw; // BCL input: 15 = 0.15C, batas maks coeff
-  let coeffA = totalAh>0 ? Math.min(bclCoeff, Math.max(0.03, Math.round((sisaAvg/totalAh)*100)/100)) : 0; // B47 ROUND(...,2), dibatasi BCL
-  let acLimit = Math.round(mcbPerPhase*0.90*10)/10; // B48 ROUND(...,1)
-  let coeffBcalc = totalAh>0 ? Math.max(0.01, Math.round(((sisaAvg*0.85)/totalAh)*100)/100) : 0; // B49 hitung Excel
-  let coeffB = Math.min(bclCoeff, coeffBcalc); // B49 dibatasi BCL manual — kalau BCL 15, sama seperti Excel (maks 0.15)
+  // B47 Excel = MIN(0.15, MAX(0.03, ROUND(B42/D29,2))) — 0.15 di Excel adalah batas maks BCL, jadi diganti BCL input (sama persis saat BCL=15)
+  let coeffA = totalAh>0 ? Math.min(bclCoeff, Math.max(0.03, Math.round((sisaAvg/totalAh)*100)/100)) : 0; // B47
+  let acLimit = Math.round(mcbPerPhase*0.90*10)/10; // B48 ROUND(...,1) — 0 kalau Phase belum diisi
+  // B49 Excel = MAX(0.01, ROUND((B42*0.85)/D29,2)) — TIDAK ada cap 0.15 di Excel, jadi tampilkan murni Excel
+  let coeffB = totalAh>0 ? Math.max(0.01, Math.round(((sisaAvg*0.85)/totalAh)*100)/100) : 0; // B49 murni Excel
+  // Arus charging nyata tidak boleh melebihi setting BCL di CSU, jadi Recharge B pakai coeff efektif = MIN(BCL, B49)
+  let coeffBEff = Math.min(bclCoeff, coeffB);
   let acLvd = 140; // B50
   let floatOut = floatV; // B51
   let boostV = 54; // B52
@@ -901,7 +919,7 @@ function calcPower(){
   let tahap2 = llvdSet<=blvdSet ? 0 : (loadBlvd>0 ? (usable*0.18)/loadBlvd : 0); // B63
   let totalBackup = tahap1 + tahap2; // B64 (jam)
   let rechargeA = sisaAvg>0 ? (usable/(sisaAvg*0.95)) : 999; // B65
-  let chargeB = totalAh*coeffB; // D29*B49
+  let chargeB = totalAh*coeffBEff; // D29 * Coeff efektif (MIN BCL, B49) — untuk B66
   let rechargeB = chargeB>0 ? (usable/(chargeB*0.95)) : 999; // B66
   // --- 6. TARGET & UPGRADE (B70-B77) ---
   let selisih = totalBackup - target; // B70
@@ -951,9 +969,10 @@ function calcPower(){
     ["10. Sisa DC Avg / Charging Avg (B42)", sisaAvg, "A", 1],
     ["11. Batt Cap CSU (B46)", battCap, "Ah", 0],
     ["11b. BCL / Batas Arus Charging (Input)", bclCoeff, "C", 2],
-    ["12. Chg Curr Coeff Opsi A — AC Limit (B47, maks BCL)", coeffA, "C", 2],
+    ["12. Chg Curr Coeff Opsi A — AC Limit (B47, cap = BCL)", coeffA, "C", 2],
     ["13. AC Curr Limit per Phase (B48)", acLimit, "A", 1],
-    ["14. Chg Curr Coeff Opsi B — BCL Statis (B49, maks BCL)", coeffB, "C", 2],
+    ["14. Chg Curr Coeff Opsi B — Tanpa AC Limit (B49, murni Excel)", coeffB, "C", 2],
+    ["14b. Coeff Efektif untuk Recharge B (MIN BCL, B49)", coeffBEff, "C", 2],
     ["15. AC LVD / Undervolt (B50)", acLvd, "V", 0],
     ["16. Float Charge Voltage (B51)", floatOut, "V", 1],
     ["17. Boost / Equalize (B52)", boostV, "V", 0],
@@ -982,12 +1001,12 @@ function calcPower(){
     ["1. TAMBAH BATERAI", tambahBank===0 ? "Tidak perlu tambah baterai. Sudah cukup untuk target." : "TAMBAH "+pcInt(tambahBank)+" BANK. Total jadi "+pcFmt(totalAhAfter,0)+"Ah. Setelah tambah, backup jadi "+pcFmt(backupAfter,1)+" jam."],
     ["2. TAMBAH MODUL", modulKurang===0 ? "MODUL CUKUP, tidak usah tambah." : "TAMBAH "+pcInt(modulKurang)+" MODUL. Total jadi "+pcInt(modulButuh)+" modul (sudah +1 redundansi N+1)."],
     ["3. UPGRADE PLN", vaButuh<=pln ? "PLN CUKUP, tidak usah upgrade." : "UPGRADE PLN ke "+tarif+". Sekarang "+pcInt(pln)+" VA, butuh "+pcInt(vaButuh)+" VA saat Low Voltage "+pcFmt(voltLow,0)+"V."],
-    ["4. SETTING CSU ZTE", "Batt Cap = "+pcFmt(battCap,0)+"Ah<br>Opsi A: Chg Curr Coeff = "+pcFmt(coeffA,2)+"C, AC Curr Limit = "+pcFmt(acLimit,1)+"A/phase (wajib aktif)<br>Opsi B: Coeff = "+pcFmt(coeffB,2)+"C<br>Float = "+pcFmt(floatOut,1)+"V, Boost = "+pcFmt(boostV,0)+"V, LLVD = "+pcFmt(llvdSet,1)+" / 50.5V, BLVD = "+pcFmt(blvdSet,1)+" / 50.5V, AC LVD = 140V."],
+    ["4. SETTING CSU ZTE", "Batt Cap = "+pcFmt(battCap,0)+"Ah<br>Opsi A: Chg Curr Coeff = "+pcFmt(coeffA,2)+"C, AC Curr Limit = "+pcFmt(acLimit,1)+"A/phase (wajib aktif)"+(phaseRaw<=0?" — ⚠️ Phase belum diisi, AC Limit = 0":"")+"<br>Opsi B: Coeff Excel = "+pcFmt(coeffB,2)+"C, Coeff efektif dibatasi BCL = "+pcFmt(coeffBEff,2)+"C<br>Float = "+pcFmt(floatOut,1)+"V, Boost = "+pcFmt(boostV,0)+"V, LLVD = "+pcFmt(llvdSet,1)+" / 50.5V, BLVD = "+pcFmt(blvdSet,1)+" / 50.5V, AC LVD = 140V."],
     ["5. RECHARGE", "Opsi A (AC Limit) = "+(rechargeA>=999?"999 jam — baterai tidak terisi!":pcFmt(rechargeA,1)+" jam")+" | Opsi B (BCL statis) = "+(rechargeB>=999?"999 jam":pcFmt(rechargeB,1)+" jam")+" | Charging ideal <5 jam = "+pcFmt(chargeIdeal,1)+"A."],
     ["6. PLN DROP / MODE", statusPln+" — Derating "+pcFmt(derating,2)+"x. "+modeLvd+". "+(selisih<0 ? "Alternatif tanpa tambah baterai: potong beban LLVD sebesar "+pcFmt(potongLlvd,1)+"A." : "")]];
   let sr=document.getElementById("pcSaran");
   if(sr) sr.innerHTML = saran.map(s=>`<tr><td style="width:22%"><b>${s[0]}</b></td><td>${s[1]}</td></tr>`).join("");
-  window._pcLast = {bank:bank, ah:ah, soh:sohPct, bcl:bclRaw, bclCoeff:bclCoeff, modul:modul, dayaModul:dayaModul, eff:effPct, load:load, loadLlvd:loadLlvd, loadBlvd:loadBlvd, loadAvg:loadAvg, pln:pln, phase:phase, voltNom:voltNom, voltPln:voltLow, pf:pf, floatV:floatV, llvd:llvdSet, lvd:blvdSet, target:target, totalAh:totalAh, statusPln:statusPln, derating:derating, dayaEfektifModul:dayaEfektifModul, mcbPerPhase:mcbPerPhase, dayaAktifNominal:dayaAktifNominal, dayaAktifAktual:dayaAktifAktual, maxDcPln:maxDcPln, dayaLoad:dayaLoad, sisaPeak:sisaPeak, sisaAvg:sisaAvg, util:util, battCap:battCap, coeffA:coeffA, acLimit:acLimit, coeffB:coeffB, acLvd:acLvd, boostV:boostV, modeLvd:modeLvd, dod:dod, usable:usable, tahap1:tahap1, tahap2:tahap2, totalBackup:totalBackup, rechargeA:rechargeA, rechargeB:rechargeB, selisih:selisih, butuhAh:butuhAh, tambahBank:tambahBank, potongLlvd:potongLlvd, chargeIdeal:chargeIdeal, modulButuh:modulButuh, modulKurang:modulKurang, vaButuh:vaButuh, tarif:tarif, backupAfter:backupAfter, C35:totalBackup*60, C40:rechargeA};
+  window._pcLast = {bank:bank, ah:ah, soh:sohPct, bcl:bclRaw, bclCoeff:bclCoeff, coeffBEff:coeffBEff, loadAvgEff:loadAvgEff, phaseRaw:phaseRaw, modul:modul, dayaModul:dayaModul, eff:effPct, load:load, loadLlvd:loadLlvd, loadBlvd:loadBlvd, loadAvg:loadAvg, pln:pln, phase:phase, voltNom:voltNom, voltPln:voltLow, pf:pf, floatV:floatV, llvd:llvdSet, lvd:blvdSet, target:target, totalAh:totalAh, statusPln:statusPln, derating:derating, dayaEfektifModul:dayaEfektifModul, mcbPerPhase:mcbPerPhase, dayaAktifNominal:dayaAktifNominal, dayaAktifAktual:dayaAktifAktual, maxDcPln:maxDcPln, dayaLoad:dayaLoad, sisaPeak:sisaPeak, sisaAvg:sisaAvg, util:util, battCap:battCap, coeffA:coeffA, acLimit:acLimit, coeffB:coeffB, acLvd:acLvd, boostV:boostV, modeLvd:modeLvd, dod:dod, usable:usable, tahap1:tahap1, tahap2:tahap2, totalBackup:totalBackup, rechargeA:rechargeA, rechargeB:rechargeB, selisih:selisih, butuhAh:butuhAh, tambahBank:tambahBank, potongLlvd:potongLlvd, chargeIdeal:chargeIdeal, modulButuh:modulButuh, modulKurang:modulKurang, vaButuh:vaButuh, tarif:tarif, backupAfter:backupAfter, C35:totalBackup*60, C40:rechargeA};
   updatePowerSiteCompare(); }
 function setPowerExample(n){
   clearPowerSiteMarks(); hidePcFloatFilled(); window._pcFloatHtml=null;
