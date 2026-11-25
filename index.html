@@ -233,7 +233,7 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <div class="grid4"><div class="pc-kpi"><span>UTILISASI PLN</span><b id="pcOutUtil">-</b></div><div class="pc-kpi"><span>SISA CHARGE PEAK</span><b id="pcOutSisa">-</b></div><div class="pc-kpi"><span>SISA CHARGE AVG</span><b id="pcOutBclMax">-</b></div><div class="pc-kpi"><span>ISI ULANG (OPSI A)</span><b id="pcOutIsiUlang">-</b></div></div><br>
 <h3 class="collapsible-head" onclick="toggleSection('pcHasilDetail','pcHasilArrow')" style="margin:8px 0 0;padding:10px 12px;background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;cursor:pointer;font-size:14px"><span>💡 SARAN & STATUS untuk <span id="pcSaranSite">-</span> — klik untuk lihat</span><span id="pcHasilArrow">▶</span></h3>
 <div id="pcHasilDetail" style="display:none"><div id="pcSaranCard" style="margin-top:10px;padding-top:2px"><table><tbody id="pcSaran"></tbody></table><p class="small">Contoh 2 kondisi: ① PLN 10600, 5×2000W, 8 bank 100Ah, Load 178A, PLN 170V • ② PLN 10600, 6×3000W, 7 bank 100Ah, Load 180A, PLN 170V.</p></div>
-<div class="pc-status warn" id="pcStatusAman">-</div><div class="pc-status warn" id="pcStatusTarget">-</div><p class="small" id="pcSiteCompare"></p></div></div>
+<div class="pc-status warn" id="pcStatusAman">-</div><div class="pc-status warn" id="pcStatusTarget">-</div><div class="pc-status warn" id="pcStatusRecovery">-</div><p class="small" id="pcSiteCompare"></p></div></div>
 
 <div class="card">
 <h3>② INPUT</h3>
@@ -921,6 +921,17 @@ function calcPower(){
   let rechargeA = sisaAvg>0 ? (usable/(sisaAvg*0.95)) : 999; // B65
   let chargeB = totalAh*coeffBEff; // D29 * Coeff efektif (MIN BCL, B49) — untuk B66
   let rechargeB = chargeB>0 ? (usable/(chargeB*0.95)) : 999; // B66
+  // --- MCB TRIP SAAT PLN KEMBALI ON (RECOVERY) ---
+  // Saat PLN mati, baterai terkuras. Saat PLN nyala lagi, rectifier harus tanggung 2 beban sekaligus: Load + Charging baterai kosong.
+  // Ini yang bikin MCB trip walau Load saja masih aman — karena Load + Charging melebihi Max DC PLN (B39).
+  let chargeMaxRecovery = totalAh*bclCoeff; // Arus charging maks yang dicoba CSU saat baterai kosong = TotalAh x BCL
+  let dcButuhRecovery = load + chargeMaxRecovery; // Total DC yang diminta saat PLN ON
+  let sisaRecovery = maxDcPln - dcButuhRecovery; // Sisa DC saat recovery, negatif = PLN tidak cukup
+  // Arus AC per phase saat recovery = (DC butuh x Float) / (Eff x Phase x VoltLow x PF) — VoltLow rendah bikin arus AC naik, makin gampang trip
+  let acButuhRecovery = (phase>0&&voltLow>0&&effF>0&&pf>0) ? (dcButuhRecovery*floatV)/(effF*phase*voltLow*pf) : 0;
+  let recoveryTrip = sisaRecovery<0; // DC tidak cukup
+  let recoveryAcTrip = (phase>0&&mcbPerPhase>0) ? (acButuhRecovery>mcbPerPhase) : false; // AC melebihi MCB
+  let recoveryAcMepet = (phase>0&&acLimit>0) ? (acButuhRecovery>acLimit && !recoveryAcTrip) : false;
   // --- 6. TARGET & UPGRADE (B70-B77) ---
   let selisih = totalBackup - target; // B70
   let butuhAh = (sohF*dod>0) ? (llvdSet<=blvdSet ? (target*load)/(sohF*dod) : ((target*0.82*load)+(target*0.18*loadBlvd))/(sohF*dod)) : 0; // B71
@@ -945,7 +956,7 @@ function calcPower(){
   setTxt("pcOutIsiUlang", (rechargeA>=999?"999":pcFmt(rechargeA,1))+" jam");
   let stA=document.getElementById("pcStatusAman");
   if(stA){ let msg, cls;
-    if(sisaPeak<0){ msg="⛔ OVERLOAD / MCB TRIP — Sisa Charge Peak "+pcFmt(sisaPeak,1)+"A (negatif) — PLN tekor, MCB pasti trip saat recovery!"; cls="pc-status danger"; }
+    if(sisaPeak<0){ msg="⛔ OVERLOAD — Load saja sudah melebihi PLN! Sisa Charge Peak "+pcFmt(sisaPeak,1)+"A (negatif) — PLN tekor walau belum charging."; cls="pc-status danger"; }
     else if(voltLow<180){ msg="⛔ KRITIS Low Voltage — Tegangan "+pcFmt(voltLow,0)+"V, derating "+pcFmt(derating,2)+"x — Sisa Peak "+pcFmt(sisaPeak,1)+"A, Sisa Avg "+pcFmt(sisaAvg,1)+"A"; cls="pc-status danger"; }
     else if(voltLow<198){ msg="⚠️ WASPADA Low Voltage — Tegangan "+pcFmt(voltLow,0)+"V — Sisa Peak "+pcFmt(sisaPeak,1)+"A, Sisa Avg "+pcFmt(sisaAvg,1)+"A"; cls="pc-status warn"; }
     else if(sisaAvg<=0){ msg="⚠️ BATERAI TIDAK TERISI — Sisa Avg 0A, recharge = 999 jam — PLN kurang untuk charging!"; cls="pc-status warn"; }
@@ -956,6 +967,14 @@ function calcPower(){
     if(totalBackup>=target){ msg="✅ TARGET "+pcFmt(target,0)+" JAM TERCAPAI — Backup "+pcFmt(totalBackup,1)+" jam — TIDAK PERLU TAMBAH BATERAI"; cls="pc-status ok"; }
     else { msg="❌ TARGET "+pcFmt(target,0)+" JAM BELUM TERCAPAI — Backup "+pcFmt(totalBackup,1)+" jam, KURANG "+pcFmt(target-totalBackup,2)+" jam"; cls="pc-status danger"; }
     stT.textContent=msg; stT.className=cls; }
+  // Status Recovery — MCB trip saat PLN kembali ON
+  let stR=document.getElementById("pcStatusRecovery");
+  if(stR){ let msg, cls;
+    if(!(pln>0)||!(load>0)||!(totalAh>0)||!(floatV>0)||!(voltLow>0)){ msg="⏳ RECOVERY (PLN KEMBALI ON) — Data belum lengkap, isi Input dulu untuk cek risiko MCB trip saat PLN nyala lagi."; cls="pc-status warn"; }
+    else if(recoveryTrip||recoveryAcTrip){ msg="⛔ MCB BISA TRIP SAAT PLN KEMBALI ON — Saat PLN nyala, rectifier harus tanggung Load "+pcFmt(load,1)+"A + Charging maks "+pcFmt(chargeMaxRecovery,1)+"A = "+pcFmt(dcButuhRecovery,1)+"A DC, tapi Max DC PLN cuma "+pcFmt(maxDcPln,1)+"A (kurang "+pcFmt(-sisaRecovery,1)+"A)"+(phase>0?" — Arus AC per phase butuh "+pcFmt(acButuhRecovery,1)+"A, MCB cuma "+pcFmt(mcbPerPhase,1)+"A / AC Limit "+pcFmt(acLimit,1)+"A":"")+". Baterai kosong tidak akan terisi, PLN putus-nyambung. Aktifkan AC Limit "+pcFmt(acLimit,1)+"A, turunkan BCL, atau naikkan daya PLN."; cls="pc-status danger"; }
+    else if(recoveryAcMepet){ msg="⚠️ RECOVERY MEPET — Load + Charging = "+pcFmt(dcButuhRecovery,1)+"A DC, masih di bawah Max DC "+pcFmt(maxDcPln,1)+"A, tapi Arus AC per phase "+pcFmt(acButuhRecovery,1)+"A sudah melebihi AC Limit "+pcFmt(acLimit,1)+"A (MCB "+pcFmt(mcbPerPhase,1)+"A). Aman hanya kalau AC Limit aktif — kalau tidak aktif, MCB bisa trip."; cls="pc-status warn"; }
+    else { msg="✅ RECOVERY AMAN — Saat PLN nyala lagi, Load "+pcFmt(load,1)+"A + Charging maks "+pcFmt(chargeMaxRecovery,1)+"A = "+pcFmt(dcButuhRecovery,1)+"A DC, masih di bawah Max DC PLN "+pcFmt(maxDcPln,1)+"A (sisa "+pcFmt(sisaRecovery,1)+"A)"+(phase>0?" — Arus AC per phase "+pcFmt(acButuhRecovery,1)+"A, di bawah AC Limit "+pcFmt(acLimit,1)+"A / MCB "+pcFmt(mcbPerPhase,1)+"A":"")+". MCB tidak akan trip saat recovery."; cls="pc-status ok"; }
+    stR.textContent=msg; stR.className=cls; }
   let rows=[
     ["1. Status Tegangan PLN (B33)", statusPln, "-", 0],
     ["2. Faktor Derating Modul (B34)", derating, "x", 2],
@@ -994,7 +1013,11 @@ function calcPower(){
     ["33. Minimal Modul Aktif N+1 (B75)", modulButuh, "modul", 0],
     ["34. Daya VA Dibutuhkan Low Volt (B76)", vaButuh, "VA", 0],
     ["35. Rekomendasi Tarif PLN 3-Phase (B77)", tarif, "-", 0],
-    ["36. Backup Setelah Tambah Bank", backupAfter, "jam", 2]];
+    ["36. Backup Setelah Tambah Bank", backupAfter, "jam", 2],
+    ["37. Charging Maks saat Recovery — TotalAh x BCL (baterai kosong)", chargeMaxRecovery, "A", 1],
+    ["38. Total DC Dibutuhkan saat PLN ON — Load + Charging Maks", dcButuhRecovery, "A", 1],
+    ["39. Sisa DC saat Recovery — Max DC (B39) - Total DC Recovery", sisaRecovery, "A", 1],
+    ["40. Arus AC per Phase saat Recovery — (DC Recovery x Float)/(Eff x Phase x VoltLow x PF)", acButuhRecovery, "A", 1]];
   let det=document.getElementById("pcDetail");
   if(det) det.innerHTML = rows.map(r=>`<tr><td>${r[0]}</td><td><b>${(typeof r[1]==="string" ? r[1] : pcFmt(r[1], r[3]))}</b></td><td>${r[2]}</td></tr>`).join("");
   let saran=[
@@ -1003,10 +1026,11 @@ function calcPower(){
     ["3. UPGRADE PLN", vaButuh<=pln ? "PLN CUKUP, tidak usah upgrade." : "UPGRADE PLN ke "+tarif+". Sekarang "+pcInt(pln)+" VA, butuh "+pcInt(vaButuh)+" VA saat Low Voltage "+pcFmt(voltLow,0)+"V."],
     ["4. SETTING CSU ZTE", "Batt Cap = "+pcFmt(battCap,0)+"Ah<br>Opsi A: Chg Curr Coeff = "+pcFmt(coeffA,2)+"C, AC Curr Limit = "+pcFmt(acLimit,1)+"A/phase (wajib aktif)"+(phaseRaw<=0?" — ⚠️ Phase belum diisi, AC Limit = 0":"")+"<br>Opsi B: Coeff Excel = "+pcFmt(coeffB,2)+"C, Coeff efektif dibatasi BCL = "+pcFmt(coeffBEff,2)+"C<br>Float = "+pcFmt(floatOut,1)+"V, Boost = "+pcFmt(boostV,0)+"V, LLVD = "+pcFmt(llvdSet,1)+" / 50.5V, BLVD = "+pcFmt(blvdSet,1)+" / 50.5V, AC LVD = 140V."],
     ["5. RECHARGE", "Opsi A (AC Limit) = "+(rechargeA>=999?"999 jam — baterai tidak terisi!":pcFmt(rechargeA,1)+" jam")+" | Opsi B (BCL statis) = "+(rechargeB>=999?"999 jam":pcFmt(rechargeB,1)+" jam")+" | Charging ideal <5 jam = "+pcFmt(chargeIdeal,1)+"A."],
-    ["6. PLN DROP / MODE", statusPln+" — Derating "+pcFmt(derating,2)+"x. "+modeLvd+". "+(selisih<0 ? "Alternatif tanpa tambah baterai: potong beban LLVD sebesar "+pcFmt(potongLlvd,1)+"A." : "")]];
+    ["6. PLN DROP / MODE", statusPln+" — Derating "+pcFmt(derating,2)+"x. "+modeLvd+". "+(selisih<0 ? "Alternatif tanpa tambah baterai: potong beban LLVD sebesar "+pcFmt(potongLlvd,1)+"A." : "")],
+    ["7. MCB TRIP SAAT PLN KEMBALI ON (RECOVERY)", (!(pln>0)||!(load>0)||!(totalAh>0)) ? "Isi Input dulu untuk cek recovery." : "Saat PLN mati, baterai terkuras. Saat PLN nyala lagi, rectifier harus tanggung Load "+pcFmt(load,1)+"A + Charging maks "+pcFmt(chargeMaxRecovery,1)+"A (TotalAh "+pcFmt(totalAh,0)+"Ah x BCL "+pcFmt(bclCoeff,2)+"C) = "+pcFmt(dcButuhRecovery,1)+"A DC. Max DC PLN (B39) cuma "+pcFmt(maxDcPln,1)+"A, jadi sisa recovery "+pcFmt(sisaRecovery,1)+"A"+(phase>0?" — Arus AC per phase butuh "+pcFmt(acButuhRecovery,1)+"A vs MCB "+pcFmt(mcbPerPhase,1)+"A / AC Limit "+pcFmt(acLimit,1)+"A":"")+". "+((recoveryTrip||recoveryAcTrip) ? "⛔ TRIP: PLN tidak cukup, MCB akan putus lagi dan baterai tidak terisi. Solusi: aktifkan AC Limit "+pcFmt(acLimit,1)+"A (CSU akan batasi charging ke sisa yang ada), turunkan BCL ke "+pcFmt(Math.max(1, Math.floor((Math.max(0,sisaPeak)/Math.max(1,totalAh))*100)),0)+"%, potong beban LLVD, atau upgrade PLN ke "+tarif+"." : (recoveryAcMepet ? "⚠️ MEPET: masih aman hanya kalau AC Limit aktif. Kalau AC Limit tidak aktif, turunkan BCL atau potong beban." : "✅ AMAN: masih ada sisa "+pcFmt(sisaRecovery,1)+"A, MCB tidak trip. "))+"Kenapa VoltLow bikin makin parah: VoltLow "+pcFmt(voltLow,0)+"V bikin Max DC turun dan arus AC naik — di 220V aman, di 175V bisa trip."]];
   let sr=document.getElementById("pcSaran");
   if(sr) sr.innerHTML = saran.map(s=>`<tr><td style="width:22%"><b>${s[0]}</b></td><td>${s[1]}</td></tr>`).join("");
-  window._pcLast = {bank:bank, ah:ah, soh:sohPct, bcl:bclRaw, bclCoeff:bclCoeff, coeffBEff:coeffBEff, loadAvgEff:loadAvgEff, phaseRaw:phaseRaw, modul:modul, dayaModul:dayaModul, eff:effPct, load:load, loadLlvd:loadLlvd, loadBlvd:loadBlvd, loadAvg:loadAvg, pln:pln, phase:phase, voltNom:voltNom, voltPln:voltLow, pf:pf, floatV:floatV, llvd:llvdSet, lvd:blvdSet, target:target, totalAh:totalAh, statusPln:statusPln, derating:derating, dayaEfektifModul:dayaEfektifModul, mcbPerPhase:mcbPerPhase, dayaAktifNominal:dayaAktifNominal, dayaAktifAktual:dayaAktifAktual, maxDcPln:maxDcPln, dayaLoad:dayaLoad, sisaPeak:sisaPeak, sisaAvg:sisaAvg, util:util, battCap:battCap, coeffA:coeffA, acLimit:acLimit, coeffB:coeffB, acLvd:acLvd, boostV:boostV, modeLvd:modeLvd, dod:dod, usable:usable, tahap1:tahap1, tahap2:tahap2, totalBackup:totalBackup, rechargeA:rechargeA, rechargeB:rechargeB, selisih:selisih, butuhAh:butuhAh, tambahBank:tambahBank, potongLlvd:potongLlvd, chargeIdeal:chargeIdeal, modulButuh:modulButuh, modulKurang:modulKurang, vaButuh:vaButuh, tarif:tarif, backupAfter:backupAfter, C35:totalBackup*60, C40:rechargeA};
+  window._pcLast = {bank:bank, ah:ah, soh:sohPct, bcl:bclRaw, bclCoeff:bclCoeff, coeffBEff:coeffBEff, loadAvgEff:loadAvgEff, phaseRaw:phaseRaw, chargeMaxRecovery:chargeMaxRecovery, dcButuhRecovery:dcButuhRecovery, sisaRecovery:sisaRecovery, acButuhRecovery:acButuhRecovery, recoveryTrip:recoveryTrip, recoveryAcTrip:recoveryAcTrip, modul:modul, dayaModul:dayaModul, eff:effPct, load:load, loadLlvd:loadLlvd, loadBlvd:loadBlvd, loadAvg:loadAvg, pln:pln, phase:phase, voltNom:voltNom, voltPln:voltLow, pf:pf, floatV:floatV, llvd:llvdSet, lvd:blvdSet, target:target, totalAh:totalAh, statusPln:statusPln, derating:derating, dayaEfektifModul:dayaEfektifModul, mcbPerPhase:mcbPerPhase, dayaAktifNominal:dayaAktifNominal, dayaAktifAktual:dayaAktifAktual, maxDcPln:maxDcPln, dayaLoad:dayaLoad, sisaPeak:sisaPeak, sisaAvg:sisaAvg, util:util, battCap:battCap, coeffA:coeffA, acLimit:acLimit, coeffB:coeffB, acLvd:acLvd, boostV:boostV, modeLvd:modeLvd, dod:dod, usable:usable, tahap1:tahap1, tahap2:tahap2, totalBackup:totalBackup, rechargeA:rechargeA, rechargeB:rechargeB, selisih:selisih, butuhAh:butuhAh, tambahBank:tambahBank, potongLlvd:potongLlvd, chargeIdeal:chargeIdeal, modulButuh:modulButuh, modulKurang:modulKurang, vaButuh:vaButuh, tarif:tarif, backupAfter:backupAfter, C35:totalBackup*60, C40:rechargeA};
   updatePowerSiteCompare(); }
 function setPowerExample(n){
   clearPowerSiteMarks(); hidePcFloatFilled(); window._pcFloatHtml=null;
@@ -1024,6 +1048,7 @@ function copyPower(){
   calcPower();
   let L=window._pcLast; if(!L) return;
   let txt="POWER CALC (Rumus Excel ZTE) — Total Backup "+pcFmt(L.totalBackup,2)+" jam (Tahap1 "+pcFmt(L.tahap1,2)+" + Tahap2 "+pcFmt(L.tahap2,2)+") | Target "+pcFmt(L.target,0)+" jam | Status "+L.statusPln+" | Derating "+pcFmt(L.derating,2)+"x | Max DC PLN "+pcFmt(L.maxDcPln,1)+"A | Sisa Peak "+pcFmt(L.sisaPeak,1)+"A | Sisa Avg "+pcFmt(L.sisaAvg,1)+"A | Recharge Opsi A "+(L.rechargeA>=999?"999":pcFmt(L.rechargeA,1))+" jam | BCL "+pcFmt(L.bcl,0)+" ("+pcFmt(L.bclCoeff,2)+"C) | Coeff A "+pcFmt(L.coeffA,2)+"C, AC Limit "+pcFmt(L.acLimit,1)+"A | Tambah Bank "+pcInt(L.tambahBank)+" | Modul Kurang "+pcInt(L.modulKurang)+" | VA Butuh "+pcInt(L.vaButuh)+" VA ("+L.tarif+")";
+  txt += " | Recovery PLN ON: Load+Charging "+pcFmt(L.dcButuhRecovery,1)+"A DC vs MaxDC "+pcFmt(L.maxDcPln,1)+"A, Sisa "+pcFmt(L.sisaRecovery,1)+"A, AC "+pcFmt(L.acButuhRecovery,1)+"A vs MCB "+pcFmt(L.mcbPerPhase,1)+"A — "+(L.recoveryTrip||L.recoveryAcTrip?"TRIP":"AMAN");
   if(window._pcSite) txt = "Site "+window._pcSite+" — "+txt;
   navigator.clipboard.writeText(txt).then(()=>alert("Hasil POWER CALC disalin")); }
 function pcParseNum(str){
