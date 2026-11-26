@@ -1581,16 +1581,52 @@ function gensetPhaseNBy(M,num){
   return "—";
 }
 function gensetPhaseN(M){ return gensetPhaseNBy(M,1); }
+function parseMotiTanggal(str){
+  if(str==null) return null;
+  let t=String(str).trim(); if(!t||t==="—"||t==="-") return null;
+  let low=t.toLowerCase();
+  // Map bulan Indonesia -> Inggris biar Date.parse jalan
+  let monMap={jan:"Jan",januari:"Jan",feb:"Feb",februari:"Feb",mar:"Mar",maret:"Mar",apr:"Apr",april:"Apr",mei:"May",may:"May",jun:"Jun",juni:"Jun",jul:"Jul",juli:"Jul",agu:"Aug",agustus:"Aug",aug:"Aug",sep:"Sep",september:"Sep",okt:"Oct",oktober:"Oct",oct:"Oct",nov:"Nov",november:"Nov",des:"Dec",desember:"Dec",dec:"Dec"};
+  let norm=t;
+  Object.keys(monMap).forEach(k=>{ norm=norm.replace(new RegExp("\\b"+k+"\\b","gi"), monMap[k]); });
+  // Format DD/MM/YYYY atau DD-MM-YYYY (Indonesia: hari dulu) — parse manual biar nggak ketukar MM/DD
+  let m=norm.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if(m){ let d=parseInt(m[1],10), mo=parseInt(m[2],10), y=parseInt(m[3],10); if(y<100) y+=2000; if(mo>=1&&mo<=12&&d>=1&&d<=31){ let dt=new Date(y,mo-1,d); if(!isNaN(dt)) return dt; } return null; }
+  let m2=norm.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if(m2){ let y=parseInt(m2[1],10), mo=parseInt(m2[2],10), d=parseInt(m2[3],10); let dt=new Date(y,mo-1,d); if(!isNaN(dt)) return dt; return null; }
+  let dt=new Date(norm); if(!isNaN(dt)) return dt;
+  let dt2=Date.parse(t); if(!isNaN(dt2)) return new Date(dt2);
+  return null;
+}
+function latestMotiTanggal(siteId, fallbackRaw){
+  let rows=(typeof MOTI_ROWS!=="undefined"?MOTI_ROWS:[])||[];
+  let best=null, bestDate=null, bestRaw=null;
+  rows.forEach(r=>{
+    if(String(r.id||"").trim()!==String(siteId||"").trim()) return;
+    let raw=r.raw||{};
+    let val="";
+    for(let k of Object.keys(raw)){ if(String(k||"").trim().toLowerCase()==="tanggal"){ val=String(raw[k]||"").trim(); break; } }
+    if(!val){ for(let k of Object.keys(raw)){ let lk=String(k||"").trim().toLowerCase(); if(lk.includes("tanggal")||lk==="tgl"||lk==="tgl audit"||lk==="tanggal audit"){ val=String(raw[k]||"").trim(); break; } } }
+    if(!val) return;
+    let dt=parseMotiTanggal(val);
+    if(!dt) return;
+    if(!bestDate||dt.getTime()>=bestDate.getTime()){ bestDate=dt; best=val; bestRaw=raw; }
+  });
+  if(best) return best;
+  // Fallback: kalau nggak ada tanggal yang bisa diparse, pakai Tanggal dari baris terakhir (RAW.MOTI) seperti sebelumnya
+  if(fallbackRaw){ let v=""; for(let k of Object.keys(fallbackRaw)){ if(String(k||"").trim().toLowerCase()==="tanggal"){ v=String(fallbackRaw[k]||"").trim(); break; } } if(v) return v; }
+  return "—";
+}
 function openD(id){let d=enriched().find(x=>x.id===id);if(!d)return;let S=RAW.SITELIST[id]||{},M=RAW.MOTI[id]||{},B=RAW.BBT[id]||{};let g=(raw,...names)=>getRaw(raw,...names);let sec=(t,rows)=>`<h4>${t}</h4><table>${rows.map(([k,v])=>`<tr><td style="width:38%;color:#555">${k}</td><td><b>${valOrDash(v)}</b></td></tr>`).join("")}</table>`;
   let warn=(!d.audit?`<p style="background:#fff3b0;padding:10px;border-radius:8px"><b>Belum Audit</b> — tidak ada di MOTI.</p>`:"")+(d.bcp==="Belum Diisi"?`<p style="background:#fff3b0;padding:10px;border-radius:8px"><b>BCP Belum Diisi</b> — kolom BCP di SITELIST masih kosong. Isi Ya / Tidak di SITELIST.</p>`:"")+((!B||!Object.keys(B).length)?`<p style="background:#fff3b0;padding:10px;border-radius:8px"><b>Belum Ada Data BBT</b></p>`:"");
   let catatan=g(M,"Catatan")!=="—"?g(M,"Catatan"):"";let remark=g(S,"Remark")!=="—"?g(S,"Remark"):"";
   mTitle.textContent=d.id+" — "+d.name;
   mBody.innerHTML=warn
-  +sec("A. Identitas Site",[["Site ID",d.id],["Site Name",d.name],["Class",d.cls],["Kabupaten",d.kab],["BCP (SITELIST)",d.bcp],["PIC TE (SITEMAP)",(d.te&&d.te.length?d.te.join(", "):"—")],["PIC MBP (SITEMAP)",(d.mbp&&d.mbp.length?d.mbp.join(", "):"—")],["BCP Raw (SITELIST)",g(S,"BCP")],["Cluster",g(M,"Cluster")],["Tanggal (MOTI)",g(M,"Tanggal")],["Input By",g(M,"Input By")],["Date Update",g(S,"Date Update")],["Jumlah Rectifier",g(M,"Jumlah Rectifier")]])
-  +sec("B. Rectifier 1",[["Tipe",g(M,"Rect1 Tipe")],["Modul OK / NOK",g(M,"Rect1 Modul OK")+" / "+g(M,"Rect1 Modul NOK")],["Load Current (MOTI)",g(M,"Rect1 Load Current")],["Load Current (BBT)",g(B,"Rect1 Load Current")],["Work Mode",g(M,"Rect1 Work Mode")],["Bus Voltage",g(M,"Rect1 Bus Voltage")],["LVD Prio / Non Prio",g(M,"Rect1 LVD Prio")+" / "+g(M,"Rect1 LVD Non Prio")],["BBT",(d.audit?(d.b1jam+" jam • "+d.b1):"—")],["Cap / Coef",g(B,"Rect1 Cap")+" / "+g(B,"Rec1 Cap Coef")]])
-  +sec("C. Rectifier 2",[["Tipe",g(M,"Rect2 Tipe")],["Modul OK / NOK",g(M,"Rect2 Modul OK")+" / "+g(M,"Rect2 Modul NOK")],["Load Current (MOTI)",g(M,"Rect2 Load Current")],["Load Current (BBT)",g(B,"Rect2 Load Current")],["Work Mode",g(M,"Rect2 Work Mode")],["Bus Voltage",g(M,"Rect2 Bus Voltage")],["BBT",(d.audit?(d.b2jam+" jam • "+d.b2):"—")],["Cap",g(B,"Rect2 Cap")]])
+  +sec("A. Identitas Site",[["Site ID",d.id],["Site Name",d.name],["Class",d.cls],["Kabupaten",d.kab],["BCP",d.bcp],["PIC TE",(d.te&&d.te.length?d.te.join(", "):"—")],["PIC MBP",(d.mbp&&d.mbp.length?d.mbp.join(", "):"—")],["BCP Raw",g(S,"BCP")],["Cluster",g(M,"Cluster")],["Tanggal Audit Terbaru",latestMotiTanggal(d.id,M)],["Input By",g(M,"Input By")],["Date Update",g(S,"Date Update")],["Jumlah Rectifier",g(M,"Jumlah Rectifier")]])
+  +sec("B. Rectifier 1",[["Tipe",g(M,"Rect1 Tipe")],["Modul OK / NOK",g(M,"Rect1 Modul OK")+" / "+g(M,"Rect1 Modul NOK")],["Load Current",g(M,"Rect1 Load Current")],["Load Current",g(B,"Rect1 Load Current")],["Work Mode",g(M,"Rect1 Work Mode")],["Bus Voltage",g(M,"Rect1 Bus Voltage")],["LVD Prio / Non Prio",g(M,"Rect1 LVD Prio")+" / "+g(M,"Rect1 LVD Non Prio")],["BBT",(d.audit?(d.b1jam+" jam • "+d.b1):"—")],["Cap / Coef",g(B,"Rect1 Cap")+" / "+g(B,"Rec1 Cap Coef")]])
+  +sec("C. Rectifier 2",[["Tipe",g(M,"Rect2 Tipe")],["Modul OK / NOK",g(M,"Rect2 Modul OK")+" / "+g(M,"Rect2 Modul NOK")],["Load Current",g(M,"Rect2 Load Current")],["Load Current",g(B,"Rect2 Load Current")],["Work Mode",g(M,"Rect2 Work Mode")],["Bus Voltage",g(M,"Rect2 Bus Voltage")],["BBT",(d.audit?(d.b2jam+" jam • "+d.b2):"—")],["Cap",g(B,"Rect2 Cap")]])
   +sec("D. Rectifier 3",[["Tipe",g(M,"Rect3 Tipe")],["Battery OK / NOK",g(M,"Rect3 Battery OK")+" / "+g(M,"Rect3 Battery NOK")],["Modul OK / NOK",g(M,"Rect3 Modul OK")+" / "+g(M,"Rect3 Modul NOK")],["Load Current",g(M,"Rect3 Load Current")],["Work Mode",g(M,"Rect3 Work Mode")]])
-  +sec("E. Baterai",[["Rect1 Battery OK / NOK",g(M,"Rect1 Battery OK")+" / "+g(M,"Rect1 Battery NOK")],["Rect1 Jenis Batt OK / NOK",g(M,"Rect1 Jenis Batt OK")+" / "+g(M,"Rect1 Jenis Batt NOK")],["Rect1 Battery Config",g(M,"Rect1 Battery Config")],["Rect1 B1 / B2 / B3 / B4",g(M,"Rect1 B1")+" / "+g(M,"Rect1 B2")+" / "+g(M,"Rect1 B3")+" / "+g(M,"Rect1 B4")],["Total Cap Batt 1",g(M,"Total Cap Batt 1")],["Type Battery 1",g(S,"Type Battery1")],["Jumlah Batt 1 / NOK",g(S,"Jumlah Batt 1")+" / "+g(S,"Jumlah Batt NOK 1")],["Rect2 Battery OK / NOK",g(M,"Rect2 Battery OK")+" / "+g(M,"Rect2 Battery NOK")],["Rect2 Jenis Batt OK / NOK",g(M,"Rect2 Jenis Batt OK")+" / "+g(M,"Rect2 Jenis Batt NOK")],["Total Cap Batt 2",g(M,"Total Cap Batt 2")],["Type Battery 2",g(S,"Type Battery 2")],["Jumlah Batt 2",g(S,"Jumlah Batt 2")],["Estimasi Backup 1 / 2",g(M,"Estimasi Backup1")+" / "+g(M,"Estimasi Backup 2")],["Rect1 Batt OK (BBT)",g(B,"Rect1 Batt OK")],["Recti2 Batt OK (BBT)",g(B,"Recti2 Batt OK")]])
+  +sec("E. Baterai",[["Rect1 Battery OK / NOK",g(M,"Rect1 Battery OK")+" / "+g(M,"Rect1 Battery NOK")],["Rect1 Jenis Batt OK / NOK",g(M,"Rect1 Jenis Batt OK")+" / "+g(M,"Rect1 Jenis Batt NOK")],["Rect1 Battery Config",g(M,"Rect1 Battery Config")],["Rect1 B1 / B2 / B3 / B4",g(M,"Rect1 B1")+" / "+g(M,"Rect1 B2")+" / "+g(M,"Rect1 B3")+" / "+g(M,"Rect1 B4")],["Total Cap Batt 1",g(M,"Total Cap Batt 1")],["Type Battery 1",g(S,"Type Battery1")],["Jumlah Batt 1 / NOK",g(S,"Jumlah Batt 1")+" / "+g(S,"Jumlah Batt NOK 1")],["Rect2 Battery OK / NOK",g(M,"Rect2 Battery OK")+" / "+g(M,"Rect2 Battery NOK")],["Rect2 Jenis Batt OK / NOK",g(M,"Rect2 Jenis Batt OK")+" / "+g(M,"Rect2 Jenis Batt NOK")],["Total Cap Batt 2",g(M,"Total Cap Batt 2")],["Type Battery 2",g(S,"Type Battery 2")],["Jumlah Batt 2",g(S,"Jumlah Batt 2")],["Estimasi Backup 1 / 2",g(M,"Estimasi Backup1")+" / "+g(M,"Estimasi Backup 2")],["Rect1 Batt OK",g(B,"Rect1 Batt OK")],["Recti2 Batt OK",g(B,"Recti2 Batt OK")]])
   +sec("F. PLN / Mainpower",[["Tipe Mainpower",g(M,"Tipe Mainpower")],["Daya MainPower",g(M,"Daya MainPower")],["Daya PLN",g(S,"Daya PLN")],["Jumlah Phasa",g(M,"Jumlah Phasa")],["Tegangan R-S-T ke N",g(M,"Tegangan R-S-T terhadap N")],["Tegangan Phasa",g(M,"Tegangan Phasa")],["Arus R-S-T",g(M,"rus R-S-T")],["Tegangan G-N",g(M,"Tegangan G-N")],["Ada ACPDB",g(M,"Ada ACPDB")],["ACPDB Tegangan",g(M,"ACPDBTeganganR-S-TterhadapN")],["ID Pelanggan",g(S,"ID Pelanggan")],["Main Fail",g(M,"Main Fail")]])
   +sec("G. Genset",[["Ada Genset",g(M,"Ada Genset")],["Jumlah Genset",g(M,"Jumlah Genset")],["Genset Running",g(M,"Genset Running")],["Type Genset",g(S,"Type Genset")],["Kapasitas Genset",g(S,"Kapasitas Genset")],["Genset #1 Tipe",g(M,"GENSET #1 Jenis/Tipe/Merek")],["Genset #1 Kapasitas",g(M,"GENSET #1 Kapasitas (kVA)")],["Genset #1 Kondisi",g(M,"GENSET #1 Kondisi")],["Genset #1 Tegangan Phase-N (R-N / S-N / T-N)",gensetPhaseNBy(M,1)],["Genset #1 Running Mode",g(M,"GENSET #1 Running Mode")],["Genset #1 Kerusakan",g(M,"GENSET #1 Kerusakan/ATS")],["Genset #2 Tipe",g(M,"GENSET #2 Jenis/Tipe/Merek")],["Genset #2 Kapasitas",g(M,"GENSET #2 Kapasitas (kVA)")],["Genset #2 Kondisi",g(M,"GENSET #2 Kondisi")],["Genset #2 Tegangan Phase-N (R-N / S-N / T-N)",gensetPhaseNBy(M,2)],["Genset #3 Tipe",g(M,"GENSET #3 Jenis/Tipe/Merek")],["Genset #3 Tegangan Phase-N (R-N / S-N / T-N)",gensetPhaseNBy(M,3)]])
   +sec("H. Solar / SPS",[["Ada SPS",g(M,"Ada SPS")],["SPS Daya Per-Panel",g(M,"SPS Daya Per-Panel (wP)")],["SPS Jumlah Panel",g(M,"SPS Jumlah Panel Keseluruhan")],["SPS Panel Bagus / Rusak",g(M,"SPS Panel Bagus")+" / "+g(M,"SPS Panel Rusak")],["SPS Konektor Karatan",g(M,"SPS Konektor Karatan")],["SPS Owner",g(M,"SPS Owner")]])
