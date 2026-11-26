@@ -212,7 +212,13 @@ html[data-theme="dark"] .rank-tabs button{background:#1E222B;border-color:#2A304
 html[data-theme="dark"] .rank-podium .pod{background:#1E222B;border-color:#2A3040}
 html[data-theme="dark"] .rank-table th{background:#1E222B}
 html[data-theme="dark"] .rank-table tr:hover td{background:#262C3A}
+.rank-filter-row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.rank-filter-row .rank-search{flex:1;width:auto;margin:0}
+.rank-role-select{flex:none;width:190px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;background:#fff;cursor:pointer;font-weight:700}
 .rank-search{width:100%;padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;margin:8px 0}
+.role-badge{font-size:10px;padding:2px 7px;border-radius:999px;background:#F1F5F9;color:#475569;font-weight:700;white-space:nowrap;vertical-align:middle;margin-left:6px}
+html[data-theme="dark"] .role-badge{background:#2A3040;color:#CBD5E1}
+@media(max-width:640px){.rank-filter-row{flex-direction:column;align-items:stretch}.rank-role-select{width:100%}}
 .rank-chart{display:flex;flex-direction:column;gap:8px;margin:14px 0}
 .rank-chart-row{display:grid;grid-template-columns:32px 1fr 90px 52px;gap:10px;align-items:center;cursor:pointer;padding:8px 10px;border-radius:10px;border:1px solid #F1F5F9;background:#fff}
 .rank-chart-row:hover{border-color:#E30613;background:#FFF5F5}
@@ -315,12 +321,12 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <!-- ================= RANK TEAM ================= -->
 <div class="wrap" id="viewRankTeam" style="display:none">
 <div class="card"><h2>🏆 RANK TEAM — Peringkat Auditor MOTI</h2><p class="small" id="rankSourceLabel">Rank dari nama di sheet MOTI (kolom <b>Input By</b> / Nama / Auditor). Hitung <b>Site ID unik</b> yang teraudit — duplikasi Site ID tidak dihitung. Klik bar / nama untuk lihat daftar Site ID-nya.</p>
-<input id="rankSearch" class="rank-search" placeholder="Cari nama auditor…" oninput="renderRankTeam()">
+<div class="rank-filter-row"><input id="rankSearch" class="rank-search" placeholder="Cari nama auditor…" oninput="renderRankTeam()"><select id="rankRoleFilter" class="rank-role-select" onchange="renderRankTeam()"><option value="">Semua Role</option><option value="__NONE__">Tanpa Role</option></select></div>
 <h3 style="margin:14px 0 6px">📊 Grafik — Site ID Unik Teraudit (Top 10)</h3>
 <div id="rankChart" class="rank-chart"></div>
 <div id="rankPodium" class="rank-podium"></div>
 <div id="rankDetail" class="rank-detail" style="display:none"><h3 id="rankDetailTitle" style="margin:0 0 8px"></h3><div id="rankDetailBody" style="overflow:auto"></div><button type="button" class="sec" onclick="document.getElementById('rankDetail').style.display='none'">Tutup Detail</button></div>
-<div class="rank-table"><table><thead><tr><th>Rank</th><th style="text-align:left">Nama</th><th>Site ID Unik<br>Teraudit</th><th>Baris MOTI</th><th>Duplikat<br>(tidak dihitung)</th><th>&gt;4 Jam</th><th>3–4 Jam</th><th>1–2 Jam</th><th>Tidak Ada</th></tr></thead><tbody id="rankBody"></tbody></table></div>
+<div class="rank-table"><table><thead><tr><th>Rank</th><th style="text-align:left">Nama</th><th>Role</th><th>Site ID Unik<br>Teraudit</th><th>Baris MOTI</th><th>Duplikat<br>(tidak dihitung)</th><th>&gt;4 Jam</th><th>3–4 Jam</th><th>1–2 Jam</th><th>Tidak Ada</th></tr></thead><tbody id="rankBody"></tbody></table></div>
 <p class="small" id="rankNote"></p>
 <button type="button" class="sec" onclick="switchView('home')">← Kembali ke Dashboard (HOME)</button></div>
 </div>
@@ -332,7 +338,7 @@ const CLASS_ORDER=["Diamond","Platinum","Gold","Silver","Bronze"];
 function sortClass(a,b){let ia=CLASS_ORDER.indexOf(a),ib=CLASS_ORDER.indexOf(b);if(ia<0)ia=99;if(ib<0)ib=99;if(ia!==ib)return ia-ib;return String(a).localeCompare(String(b));}
 const CATS=["Tidak Ada Backup Time","Backup Time 1-2 Jam","Backup Time 3-4 Jam","Backup Time diatas 4 Jam"]; const BCP_CATS=["Ya","Tidak","Belum Diisi"]; const BCP_COLORS={"Ya":"#0B6E4F","Tidak":"#E30613","Belum Diisi":"#E9ECEF"}; function normBCP(s){s=(s||"").toString().trim();if(!s) return "Belum Diisi"; let l=s.toLowerCase(); if(l==="ya"||l==="y"||l==="yes"||l==="1") return "Ya"; if(l==="tidak"||l==="tdk"||l==="no"||l==="n"||l==="0"||l==="bukan"||l==="tidak bcp") return "Tidak"; return "Belum Diisi";} function bcpBadgeClass(b){return b==="Ya"?"badge-bcp-ya":b==="Tidak"?"badge-bcp-tidak":"badge-bcp-belum";} function gensetBadgeClass(v){return v==="Auto"?"badge-genset-auto":v==="Manual"?"badge-genset-manual":v==="Broken"?"badge-genset-broken":v==="Hard Broken"?"badge-genset-hard":"badge-genset-none";} function gensetStatusOf(id){ let g=GENSET.find(x=>x.id===id); if(!g) return "-"; if(g.weekly && GENSET_LATEST_WEEK!=null && g.weekly[GENSET_LATEST_WEEK]!=null) return g.weekly[GENSET_LATEST_WEEK]; return g.status||"-"; } function gensetAdaOf(id){ return GENSET.some(x=>x.id===id) ? "Ada Genset" : "Tidak Ada Genset"; } function bcpCounts(list){let o={}; BCP_CATS.forEach(c=>o[c]={total:0,audit:0,belum:0,bbt:0}); list.forEach(d=>{let k=BCP_CATS.includes(d.bcp)?d.bcp:"Belum Diisi"; if(!o[k]) o[k]={total:0,audit:0,belum:0,bbt:0}; o[k].total++; if(d.audit) o[k].audit++; else o[k].belum++; if(d.b1!=="Belum Ada Data BBT") o[k].bbt++;}); return o;}
 const COLORS={"Belum Audit":"#6B7280","Belum Ada Data BBT":"#E9ECEF","Tidak Ada Backup Time":"#E30613","Backup Time 1-2 Jam":"#FF6B00","Backup Time 3-4 Jam":"#FFB800","Backup Time diatas 4 Jam":"#0B6E4F"};
-let SITELIST=[],MOTI=[],BBT=[],GENSET=[]; let MOTI_ROWS=[], MOTI_HEADERS=[]; let RAW={SITELIST:{},MOTI:{},BBT:{},GENSET:{},SITEMAP:{}}; let PIC_BY_ID={}, PIC_STATS=[], TE_STATS=[], MBP_STATS=[], selTE=new Set(), selMBP=new Set(); const GENSET_PUB="https://docs.google.com/spreadsheets/d/e/2PACX-1vRWZSAhooYc6mIpPhDHoHLbbkwNzAaoBPVs5CWGhQwB4kH1ilwsbv9IoofUWSAlihctRP7bqFDdUeRB/pub?gid=172517016&single=true&output=csv";
+let SITELIST=[],MOTI=[],BBT=[],GENSET=[]; let MOTI_ROWS=[], MOTI_HEADERS=[]; let USERS=[], USER_ROLE_MAP=new Map(); let RAW={SITELIST:{},MOTI:{},BBT:{},GENSET:{},SITEMAP:{}}; let PIC_BY_ID={}, PIC_STATS=[], TE_STATS=[], MBP_STATS=[], selTE=new Set(), selMBP=new Set(); const GENSET_PUB="https://docs.google.com/spreadsheets/d/e/2PACX-1vRWZSAhooYc6mIpPhDHoHLbbkwNzAaoBPVs5CWGhQwB4kH1ilwsbv9IoofUWSAlihctRP7bqFDdUeRB/pub?gid=172517016&single=true&output=csv";
 function parseCSV(t){let rows=[],cur=[],q=false,v="";for(let i=0;i<t.length;i++){let c=t[i];if(c=='"'){if(q&&t[i+1]=='"'){v+='"';i++}else q=!q}else if(c==","&&!q){cur.push(v);v=""}else if((c=="\n"||c=="\r")&&!q){if(c=="\r"&&t[i+1]=="\n")i++;cur.push(v);rows.push(cur);cur=[];v=""}else v+=c}if(v||cur.length){cur.push(v);rows.push(cur)}return rows}
 function normCat(s){s=(s||"").trim();if(/diatas|di atas/i.test(s))return "Backup Time diatas 4 Jam";if(/1-2/.test(s))return "Backup Time 1-2 Jam";if(/2-3/.test(s))return "Backup Time 3-4 Jam";if(/3-4/.test(s))return "Backup Time 3-4 Jam";return "Tidak Ada Backup Time"}
 function catClass(c){return c==="Tidak Ada Backup Time"?"c-tidak":c.includes("1-2")?"c-12":c.includes("3-4")?"c-34":c.includes("diatas")?"c-4":"c-nobbt"}
@@ -369,6 +375,15 @@ function renderPICMenu(){ updatePICSummary(); }
 function clearTE(){ selTE.clear(); buildFilters(); render(); }
 function clearMBP(){ selMBP.clear(); buildFilters(); render(); }
 function clearPIC(){ selTE.clear(); selMBP.clear(); buildFilters(); render(); }
+function normUserName(v){ return String(v==null?"":v).toLowerCase().replace(/[^a-z0-9]/g,""); }
+function getUserRole(name){ if(!name) return ""; let k=normUserName(name); if(!k) return ""; try{ return String(USER_ROLE_MAP.get(k)||"").trim(); }catch(e){ return ""; } }
+function buildRankRoleOptions(){
+  let sel=document.getElementById("rankRoleFilter"); if(!sel) return;
+  let cur=sel.value||"";
+  let roles=[...new Set((USERS||[]).map(u=>String(u.role||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id-ID"));
+  sel.innerHTML="<option value=\"\">Semua Role</option><option value=\"__NONE__\">Tanpa Role</option>"+roles.map(r=>"<option value=\""+String(r).replace(/"/g,"&quot;")+"\">"+String(r).replace(/</g,"&lt;")+"</option>").join("");
+  if(cur){ let ok=[...sel.options].some(o=>o.value===cur); if(ok) sel.value=cur; else if(cur==="__NONE__") sel.value="__NONE__"; }
+}
 function motiNamesFromRaw(raw){
   if(!raw) return [];
   let out=[];
@@ -434,6 +449,9 @@ function rankTeamFilteredList(){
   let list=rankTeamData();
   let q=""; try{ q=String(document.getElementById("rankSearch").value||"").trim().toLowerCase(); }catch(e){}
   if(q) list=list.filter(e=>String(e.name).toLowerCase().includes(q));
+  let rf=""; try{ rf=String(document.getElementById("rankRoleFilter").value||""); }catch(e){}
+  if(rf==="__NONE__"){ list=list.filter(e=>!getUserRole(e.rawName||e.name)); }
+  else if(rf){ list=list.filter(e=>getUserRole(e.rawName||e.name).toLowerCase()===rf.toLowerCase()); }
   return list;
 }
 function rankTeamGo(name){
@@ -448,7 +466,7 @@ function showRankDetail(name){
   if(!wrap||!title||!body) return;
   let byId=new Map(); try{ enriched().forEach(d=>byId.set(String(d.id).trim(),d)); }catch(err){}
   let escAll=v=>String(v==null?"":v).replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  title.textContent="Detail — "+e.name+" • "+e.unique+" Site ID unik teraudit (duplikasi tidak dihitung)";
+  let dRole=getUserRole(e.rawName||e.name)||(window._rankMode==="LEGACY"?(e.role||""):""); title.textContent="Detail — "+e.name+(dRole?" ("+dRole+")":"")+" • "+e.unique+" Site ID unik teraudit (duplikasi tidak dihitung)";
   if(!e.sites.length){ body.innerHTML="<p class='small'>Tidak ada Site ID.</p>"; }
   else{
     body.innerHTML="<div style='overflow:auto;max-height:320px'><table><thead><tr><th>Site ID</th><th>Site Name</th><th>Class</th><th>Kabupaten</th><th>Backup R1</th></tr></thead><tbody>"+e.sites.map(sid=>{
@@ -463,6 +481,7 @@ function showRankDetail(name){
 function renderRankTeam(){
   let chart=document.getElementById("rankChart"), pod=document.getElementById("rankPodium"), body=document.getElementById("rankBody"), note=document.getElementById("rankNote"), srcLabel=document.getElementById("rankSourceLabel");
   if(!body) return;
+  try{ buildRankRoleOptions(); }catch(e){}
   let list=rankTeamFilteredList();
   let mode=window._rankMode||"MOTI";
   if(srcLabel){
@@ -472,7 +491,7 @@ function renderRankTeam(){
   if(!list.length){
     if(chart) chart.innerHTML="<p class='small' style='text-align:center;padding:12px'>Belum ada nama di sheet MOTI — pastikan ada kolom <b>Input By</b> / Nama / Auditor di sheet MOTI dan sudah terisi.</p>";
     if(pod) pod.innerHTML="";
-    body.innerHTML="<tr><td colspan=\"9\" style=\"text-align:center;padding:20px\">Belum ada data Rank Team.</td></tr>";
+    body.innerHTML="<tr><td colspan=\"10\" style=\"text-align:center;padding:20px\">Belum ada data Rank Team.</td></tr>";
     if(note) note.textContent="";
     return;
   }
@@ -482,19 +501,25 @@ function renderRankTeam(){
     chart.innerHTML=top.map((e,i)=>{
       let w=max?Math.round(e.unique/max*100):0;
       let escN=String(e.name).replace(/</g,"&lt;").replace(/'/g,"\\'");
-      return "<div class=\"rank-chart-row\" onclick=\"rankTeamGo('"+escN+"')\"><span class=\"rrank\">#"+(i+1)+"</span><span class=\"rname\" title=\""+String(e.name).replace(/"/g,"&quot;")+"\">"+String(e.name).replace(/</g,"&lt;")+"</span><span class=\"rbar\"><i style=\"width:"+w+"%\"></i></span><span class=\"rcount\">"+e.unique+" site</span></div>";
+      let role=getUserRole(e.rawName||e.name)||(window._rankMode==="LEGACY"?(e.role||""):"");
+      let roleTxt=role?String(role).replace(/</g,"&lt;"):"Tanpa Role";
+      return "<div class=\"rank-chart-row\" onclick=\"rankTeamGo('"+escN+"')\"><span class=\"rrank\">#"+(i+1)+"</span><span class=\"rname\" title=\""+String(e.name).replace(/"/g,"&quot;")+"\">"+String(e.name).replace(/</g,"&lt;")+"<span class=\"role-badge\">"+roleTxt+"</span></span><span class=\"rbar\"><i style=\"width:"+w+"%\"></i></span><span class=\"rcount\">"+e.unique+" site</span></div>";
     }).join("");
   }
   let medals=["🥇","🥈","🥉"];
   if(pod){
     pod.innerHTML=list.slice(0,3).map((e,i)=>{
       let escN=String(e.name).replace(/</g,"&lt;").replace(/'/g,"\\'");
-      return "<div class=\"pod "+(i===0?"gold":"")+"\" onclick=\"rankTeamGo('"+escN+"')\"><div style=\"font-size:26px\">"+medals[i]+"</div><b>"+String(e.name).replace(/</g,"&lt;")+"</b><div class=\"score\">"+e.unique+"</div><div class=\"meta\">Site ID unik teraudit • "+e.good+" backup &gt;4 jam • Duplikat "+e.dup+" tidak dihitung</div></div>";
+      let role=getUserRole(e.rawName||e.name)||(window._rankMode==="LEGACY"?(e.role||""):"");
+      let roleTxt=role?String(role).replace(/</g,"&lt;"):"Tanpa Role";
+      return "<div class=\"pod "+(i===0?"gold":"")+"\" onclick=\"rankTeamGo('"+escN+"')\"><div style=\"font-size:26px\">"+medals[i]+"</div><b>"+String(e.name).replace(/</g,"&lt;")+"</b><div><span class=\"role-badge\">"+roleTxt+"</span></div><div class=\"score\">"+e.unique+"</div><div class=\"meta\">Site ID unik teraudit • "+e.good+" backup &gt;4 jam • Duplikat "+e.dup+" tidak dihitung</div></div>";
     }).join("");
   }
   body.innerHTML=list.map((e,i)=>{
     let escN=String(e.name).replace(/</g,"&lt;").replace(/'/g,"\\'");
-    return "<tr><td><b>#"+(i+1)+"</b></td><td class=\"name\" onclick=\"rankTeamGo('"+escN+"')\">"+String(e.name).replace(/</g,"&lt;")+"</td><td><b>"+e.unique+"</b></td><td>"+e.raw+"</td><td>"+e.dup+"</td><td>"+e.good+"</td><td>"+e.mid+"</td><td>"+e.low+"</td><td>"+e.none+"</td></tr>";
+    let role=getUserRole(e.rawName||e.name)||(window._rankMode==="LEGACY"?(e.role||""):"");
+    let roleTxt=role?String(role).replace(/</g,"&lt;"):"Tanpa Role";
+    return "<tr><td><b>#"+(i+1)+"</b></td><td class=\"name\" onclick=\"rankTeamGo('"+escN+"')\">"+String(e.name).replace(/</g,"&lt;")+"</td><td><span class=\"role-badge\">"+roleTxt+"</span></td><td><b>"+e.unique+"</b></td><td>"+e.raw+"</td><td>"+e.dup+"</td><td>"+e.good+"</td><td>"+e.mid+"</td><td>"+e.low+"</td><td>"+e.none+"</td></tr>";
   }).join("");
   if(note){
     let totalUnique=new Set(); rankTeamData().forEach(e=>e.sites.forEach(sid=>totalUnique.add(String(sid))));
@@ -510,12 +535,22 @@ async function loadLive(){
     MOTI_HEADERS=mHead.slice();
     MOTI_ROWS=mRows.slice(1).filter(r=>r[mi]&&String(r[mi]).trim()).map(r=>{let o={};mHead.forEach((h,i)=>o[h]=r[i]||"");return{id:String(r[mi]).trim(),raw:o}});
     MOTI=mRows.slice(1).filter(r=>r[mi]&&String(r[mi]).trim()).map(r=>{let o={};mHead.forEach((h,i)=>o[h]=r[i]||"");RAW.MOTI[String(r[mi]).trim()]=o;return{id:String(r[mi]).trim(),name:r[mi+1]||""}});
+    try{
+      let uTxt=await fetchCSV(gviz("USERS")); let uRows=parseCSV(uTxt); let uHead=uRows[0].map(x=>String(x).trim());
+      let ul=h=>String(h||"").trim().toLowerCase();
+      let pickIdx=(tests)=>{ for(let t of tests){ let i=uHead.findIndex(h=>t(ul(h))); if(i>=0) return i; } return -1; };
+      let uNameIdx=pickIdx([l=>l==="nama"||l==="nama lengkap"||l==="name"||l==="full name", l=>l.includes("nama")&&!l.includes("site")&&!l.includes("kab"), l=>l==="username"||l==="user"||l==="input by"||l==="auditor"||l==="petugas"]);
+      if(uNameIdx<0) uNameIdx=0;
+      let uRoleIdx=pickIdx([l=>l==="role"||l==="jabatan"||l==="posisi"||l==="peran", l=>l.includes("role")||l.includes("jabatan")||l.includes("posisi")||l.includes("peran"), l=>l==="team"||l==="tim"||l==="level"||l==="bagian"||l==="divisi"]);
+      USERS=uRows.slice(1).filter(r=>r[uNameIdx]&&String(r[uNameIdx]).trim()).map(r=>{ let o={}; uHead.forEach((h,i)=>o[h]=r[i]||""); return {name:String(r[uNameIdx]).trim(),role:uRoleIdx>=0?String(r[uRoleIdx]||"").trim():"",raw:o}; });
+      USER_ROLE_MAP=new Map(); USERS.forEach(u=>{ let k=normUserName(u.name); if(k&&!USER_ROLE_MAP.has(k)) USER_ROLE_MAP.set(k,u.role||""); });
+    }catch(_ue){ USERS=[]; USER_ROLE_MAP=new Map(); }
     let bTxt=await fetchCSV(gviz("BBT")); let rows=parseCSV(bTxt); let h=rows[0].map(x=>String(x).trim().toLowerCase()); let fi=n=>h.findIndex(x=>x.includes(n)); let jam=[]; h.forEach((x,i)=>{if(x.includes("bbt")&&x.includes("jam"))jam.push(i)});
     BBT=[]; for(let r of rows.slice(1)){if(!r[fi("site id")]||String(r[fi("site id")]).includes("#REF"))continue; let o={}; rows[0].forEach((hh,ii)=>o[String(hh).trim()]=r[ii]||""); RAW.BBT[String(r[fi("site id")]).trim()]=o; BBT.push({id:String(r[fi("site id")]).trim(),name:r[fi("site name")]||"",b1jam:parseFloat(String(r[jam[0]]||"0").replace(",","."))||0,b2jam:parseFloat(String(r[jam[1]]||"0").replace(",","."))||0,b1:normCat(r[fi("bbt1 cat")]),b2:normCat(r[fi("bbt2 cat")]),cls:(r[h.findIndex(x=>x==="class")]||"").trim(),kab:(r[h.findIndex(x=>x==="kabupaten")]||"").trim()});}
     try{ let gTxt=await fetchCSV(GENSET_PUB); let gRows=parseCSV(gTxt); let gHead=gRows[0].map(x=>String(x).trim()); let _gl=h=>String(h||"").trim().toLowerCase(); let gId=gHead.findIndex(h=>_gl(h).includes("site id")); if(gId<0) gId=0; let gName=gHead.findIndex(h=>_gl(h).includes("site name")||_gl(h).includes("nama")); if(gName<0) gName=1; let gCls=gHead.findIndex(h=>_gl(h)==="class"); if(gCls<0) gCls=-1; let gKab=gHead.findIndex(h=>_gl(h).includes("kabupaten")||_gl(h)==="kab"); if(gKab<0) gKab=-1; let weekCols=[]; gHead.forEach((h,i)=>{ let wk=parseWeekHeader(h); if(wk!==null) weekCols.push({idx:i,week:wk,label:String(h).trim()}); }); weekCols.sort((a,b)=>a.week-b.week); let kerusakanCols=[]; gHead.forEach((h,i)=>{ let lh=_gl(h); if(lh.includes("kerusakan")||lh.includes("rusak")||lh.includes("keterangan")||lh.includes("penyebab")||lh.includes("damage")||lh.includes("problem")) kerusakanCols.push({idx:i,week:parseWeekHeader(h),label:String(h).trim()}); }); GENSET_WEEKS=weekCols.map(c=>({week:c.week,label:c.label})); if(weekCols.length){ GENSET_LATEST_WEEK=weekCols[weekCols.length-1].week; GENSET_LATEST_LABEL=weekCols[weekCols.length-1].label; } else { GENSET_WEEKS=[]; GENSET_LATEST_WEEK=null; GENSET_LATEST_LABEL="-"; } GENSET=gRows.slice(1).filter(r=>r[gId]&&String(r[gId]).trim()&&!String(r[gId]).includes("#")&&!String(r[gId]).toLowerCase().includes("site id")).map(r=>{ let o={}; gHead.forEach((h,i)=>o[h]=r[i]||""); let _id=String(r[gId]).trim(); RAW.GENSET[_id]=o; let weekly={}; let weeklyRaw={}; let kerusakanByWeek={}; let kerusakanSingle=""; kerusakanCols.forEach(c=>{ let v=String(r[c.idx]||"").trim(); if(c.week!==null) kerusakanByWeek[c.week]=v; else if(v) kerusakanSingle=v; }); if(weekCols.length){ weekCols.forEach(c=>{ weekly[c.week]=normGenset(r[c.idx]||""); weeklyRaw[c.week]=String(r[c.idx]||"").trim(); }); let st="-"; for(let k=weekCols.length-1;k>=0;k--){ let v=weekly[weekCols[k].week]; if(v!=="-"){ st=v; break; } } return {id:_id,name:r[gName]||"",cls:gCls>=0?String(r[gCls]||"").trim():"",kab:gKab>=0?String(r[gKab]||"").trim():"",status:st,weekly:weekly,weeklyRaw:weeklyRaw,kerusakanByWeek:kerusakanByWeek,kerusakan:kerusakanSingle,raw:o}; } let joined=r.map(x=>String(x||"")).join(" | ").toLowerCase(); let st="-"; if(joined.includes("hard")&&joined.includes("broken")) st="Hard Broken"; else if(joined.includes("broken")) st="Broken"; else if(joined.includes("auto")) st="Auto"; else if(joined.includes("manual")) st="Manual"; return {id:_id,name:r[gName]||"",cls:gCls>=0?String(r[gCls]||"").trim():"",kab:gKab>=0?String(r[gKab]||"").trim():"",status:st,weekly:{},weeklyRaw:{},kerusakanByWeek:kerusakanByWeek,kerusakan:kerusakanSingle,raw:o}; }); }catch(_ge){ GENSET=snapshotGensetWithWeeks(); }
     banner.className="banner live"; banner.innerHTML=`<b>Status: LIVE ✔</b> — SITELIST (Total): ${SITELIST.length} • MOTI (Teraudit): ${MOTI.length} • BBT: ${BBT.length} • GENSET: ${GENSET.length} • Terakhir: ${new Date().toLocaleString("id-ID")} — <button class="sec" onclick="loadLive()">Refresh Live</button>`;
   }catch(e){
-    SITELIST=SNAP_SITELIST.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3],bcp:normBCP(r[4]||""),bcpRaw:r[4]||""})); MOTI=SNAP_MOTI.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3]})); MOTI_HEADERS=["Site ID","Site Name","Class","Kabupaten"]; MOTI_ROWS=SNAP_MOTI.map(r=>({id:r[0],raw:{"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3]}})); BBT=SNAP_BBT.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3],b1jam:r[4],b2jam:r[5],b1:r[6],b2:r[7]})); GENSET=snapshotGensetWithWeeks(); RAW={SITELIST:{},MOTI:{},BBT:{},GENSET:{},SITEMAP:{}}; SNAP_SITELIST.forEach(r=>RAW.SITELIST[r[0]]={"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3],"BCP":r[4]||""}); SNAP_MOTI.forEach(r=>RAW.MOTI[r[0]]={"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3]}); BBT.forEach(b=>RAW.BBT[b.id]={"Site ID":b.id,"Site Name":b.name,"BBT1 Cat":b.b1,"BBT2 Cat":b.b2});
+    SITELIST=SNAP_SITELIST.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3],bcp:normBCP(r[4]||""),bcpRaw:r[4]||""})); MOTI=SNAP_MOTI.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3]})); MOTI_HEADERS=["Site ID","Site Name","Class","Kabupaten"]; MOTI_ROWS=SNAP_MOTI.map(r=>({id:r[0],raw:{"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3]}})); BBT=SNAP_BBT.map(r=>({id:r[0],name:r[1],cls:r[2],kab:r[3],b1jam:r[4],b2jam:r[5],b1:r[6],b2:r[7]})); GENSET=snapshotGensetWithWeeks(); USERS=[]; USER_ROLE_MAP=new Map(); RAW={SITELIST:{},MOTI:{},BBT:{},GENSET:{},SITEMAP:{}}; SNAP_SITELIST.forEach(r=>RAW.SITELIST[r[0]]={"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3],"BCP":r[4]||""}); SNAP_MOTI.forEach(r=>RAW.MOTI[r[0]]={"Site ID":r[0],"Site Name":r[1],"Class":r[2],"Kabupaten":r[3]}); BBT.forEach(b=>RAW.BBT[b.id]={"Site ID":b.id,"Site Name":b.name,"BBT1 Cat":b.b1,"BBT2 Cat":b.b2});
     banner.className="banner warn"; banner.innerHTML=`<b>Status: SNAPSHOT (live gagal — ${e.message})</b> — Sheet belum di-Publish to web / belum Share Anyone with link. <button onclick="loadLive()">Coba Live Lagi</button>`;
   }
   buildFilters(); render();
