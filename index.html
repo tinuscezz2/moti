@@ -220,6 +220,23 @@ html[data-theme="dark"] .rank-table tr:hover td{background:#262C3A}
 html[data-theme="dark"] .role-badge{background:#2A3040;color:#CBD5E1}
 @media(max-width:640px){.rank-filter-row{flex-direction:column;align-items:stretch}.rank-role-select{width:100%}}
 .rank-chart{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.rank-daily-wrap{margin:16px 0 8px;border:1px solid #E5E7EB;border-radius:14px;padding:14px;background:#fff}
+.rank-daily-filter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.rank-daily-filter label{font-size:13px;font-weight:700;display:flex;gap:6px;align-items:center}
+.rank-daily-filter input[type="date"]{padding:8px 10px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;background:#fff;cursor:pointer}
+.rank-ts-btn{padding:8px 12px;border-radius:999px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-weight:700;font-size:12px}
+.rank-ts-btn:hover{border-color:#E30613}
+.rank-ts-btn.active{background:#7A0018;color:#fff;border-color:#7A0018}
+.rank-ts-btn.primary{background:linear-gradient(135deg,#E30613,#7A0018);color:#fff;border-color:#7A0018}
+.rank-daily-summary{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin:8px 0}
+.rank-daily-summary .ds{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:10px;padding:8px 12px}
+.rank-daily-summary .ds b{font-size:18px;display:block;line-height:1.2}
+.rank-daily-chart{overflow:auto}
+.rank-daily-chart svg{width:100%;min-width:560px;height:auto;display:block}
+html[data-theme="dark"] .rank-daily-wrap{background:#1E222B;border-color:#2A3040}
+html[data-theme="dark"] .rank-daily-filter input[type="date"]{background:#151922;border-color:#2A3040;color:#E6E8EC}
+html[data-theme="dark"] .rank-ts-btn{background:#151922;border-color:#2A3040;color:#E6E8EC}
+html[data-theme="dark"] .rank-daily-summary .ds{background:#151922;border-color:#2A3040}
 .rank-chart-row{display:grid;grid-template-columns:32px 1fr 90px 52px;gap:10px;align-items:center;cursor:pointer;padding:8px 10px;border-radius:10px;border:1px solid #F1F5F9;background:#fff}
 .rank-chart-row:hover{border-color:#E30613;background:#FFF5F5}
 .rank-chart-row .rname{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
@@ -324,6 +341,26 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <div id="rankPodium" class="rank-podium"></div>
 <h3 style="margin:14px 0 6px">📊 Grafik (Top 10)</h3>
 <div id="rankChart" class="rank-chart"></div>
+<div id="rankDailyWrap" class="rank-daily-wrap">
+<h3 style="margin:0">📈 Input Harian — Berdasarkan Timestamp</h3>
+<p class="small" style="margin:6px 0 0">Satu titik = jumlah baris MOTI yang masuk di tanggal itu. Filter tanggal di bawah juga memfilter Rank (Podium, Grafik Top 10, dan Tabel) di halaman ini.</p>
+<div class="rank-daily-filter">
+<label>Dari <input type="date" id="rankTsStart" onchange="renderRankTeam()"></label>
+<label>Sampai <input type="date" id="rankTsEnd" onchange="renderRankTeam()"></label>
+<button type="button" class="rank-ts-btn primary" onclick="renderRankTeam()">Terapkan</button>
+<button type="button" class="rank-ts-btn" onclick="resetRankTsFilter()">Reset</button>
+</div>
+<div class="rank-daily-filter" style="margin-top:0">
+<button type="button" class="rank-ts-btn" data-ts-preset="today" onclick="setRankTsPreset('today')">Hari Ini</button>
+<button type="button" class="rank-ts-btn" data-ts-preset="7d" onclick="setRankTsPreset('7d')">7 Hari Terakhir</button>
+<button type="button" class="rank-ts-btn" data-ts-preset="30d" onclick="setRankTsPreset('30d')">30 Hari Terakhir</button>
+<button type="button" class="rank-ts-btn" data-ts-preset="all" onclick="setRankTsPreset('all')">Semua</button>
+<span id="rankTsInfo" class="small" style="margin-left:4px"></span>
+</div>
+<div id="rankDailySummary" class="rank-daily-summary"></div>
+<div id="rankDailyChart" class="rank-daily-chart"></div>
+<p id="rankDailyNote" class="small" style="margin:8px 0 0;color:#64748B"></p>
+</div>
 <div id="rankDetail" class="rank-detail" style="display:none"><h3 id="rankDetailTitle" style="margin:0 0 8px"></h3><div id="rankDetailBody" style="overflow:auto"></div><button type="button" class="sec" onclick="document.getElementById('rankDetail').style.display='none'">Tutup Detail</button></div>
 <div class="rank-table"><table><thead><tr><th>Rank</th><th style="text-align:left">Nama</th><th>Role</th><th>Site ID Unik<br>Teraudit</th><th>Baris MOTI</th><th>Duplikat<br>(tidak dihitung)</th><th>&gt;4 Jam</th><th>3–4 Jam</th><th>1–2 Jam</th><th>Tidak Ada</th></tr></thead><tbody id="rankBody"></tbody></table></div>
 <button type="button" class="sec" onclick="switchView('home')">← Kembali ke Dashboard (HOME)</button></div>
@@ -398,9 +435,179 @@ function motiNamesFromRaw(raw){
   }
   return out;
 }
+function motiTimestampOf(raw){
+  if(!raw) return "";
+  let keys=Object.keys(raw||{});
+  let low=k=>String(k||"").trim().toLowerCase();
+  let pri=["timestamp","waktu input","waktu","jam input","submitted at","created at","tanggal input","tgl input","tanggal","tgl","date"];
+  for(let p of pri){ for(let k of keys){ if(low(k)===p){ let v=String(raw[k]||"").trim(); if(v) return v; } } }
+  for(let k of keys){ if(low(k).includes("timestamp")){ let v=String(raw[k]||"").trim(); if(v) return v; } }
+  for(let k of keys){ if(low(k).includes("waktu")||low(k).includes("time")){ let v=String(raw[k]||"").trim(); if(v) return v; } }
+  for(let k of keys){ if(low(k).includes("tanggal")||low(k)==="tgl"||low(k)==="date"){ let v=String(raw[k]||"").trim(); if(v) return v; } }
+  return "";
+}
+function parseMotiTimestamp(str){
+  if(str==null) return null;
+  let t=String(str).trim(); if(!t||t==="—"||t==="-") return null;
+  // Ambil token tanggal saja — jam tidak dipakai untuk grouping harian
+  // Pola: YYYY-MM-DD, DD/MM/YYYY, DD-Mon-YYYY, dst. (jam di belakang diabaikan)
+  let mY=t.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+  if(mY){ try{ let dt=parseMotiTanggal(mY[0]); if(dt){ dt.setHours(0,0,0,0); return dt; } }catch(e){} }
+  let mD=t.match(/(\d{1,2})[\s\-\/\.]([A-Za-z]{3,9}|\d{1,2})[\s\-\/\.](\d{2,4})/);
+  if(mD){ try{ let dt=parseMotiTanggal(mD[0]); if(dt){ dt.setHours(0,0,0,0); return dt; } }catch(e){} }
+  try{ let dt=parseMotiTanggal(t); if(dt){ dt.setHours(0,0,0,0); return dt; } }catch(e){}
+  try{ let dt=new Date(t); if(!isNaN(dt)){ dt.setHours(0,0,0,0); return dt; } }catch(e){}
+  return null;
+}
+function rankTsRange(){
+  let sv="", ev="";
+  try{ sv=String(document.getElementById("rankTsStart")?.value||"").trim(); }catch(e){}
+  try{ ev=String(document.getElementById("rankTsEnd")?.value||"").trim(); }catch(e){}
+  let start=sv?new Date(sv+"T00:00:00"):null; if(start&&isNaN(start)) start=null;
+  let end=ev?new Date(ev+"T23:59:59"):null; if(end&&isNaN(end)) end=null;
+  if(start) start.setHours(0,0,0,0);
+  if(end) end.setHours(23,59,59,999);
+  if(start&&end&&start.getTime()>end.getTime()){ let tmp=start; start=end; end=tmp; start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+  return {start:start,end:end,has:!!(start||end),startVal:sv,endVal:ev};
+}
+function rankTsFilteredRows(){
+  let rows=(MOTI_ROWS||[]);
+  let r=rankTsRange(); if(!r.has) return rows;
+  return rows.filter(row=>{
+    let dt=parseMotiTimestamp(motiTimestampOf(row.raw||{}));
+    if(!dt) return false;
+    if(r.start&&dt.getTime()<r.start.getTime()) return false;
+    if(r.end&&dt.getTime()>r.end.getTime()) return false;
+    return true;
+  });
+}
+function rankDailySeries(){
+  let rows=rankTsFilteredRows();
+  // Samakan dengan filter nama / role di Rank — biar chart konsisten dengan tabel
+  let q=""; try{ q=String(document.getElementById("rankSearch")?.value||"").trim().toLowerCase(); }catch(e){}
+  let rf=""; try{ rf=String(document.getElementById("rankRoleFilter")?.value||""); }catch(e){}
+  if(q||rf){
+    rows=rows.filter(row=>{
+      let names=motiNamesFromRaw(row.raw||{});
+      if(!names.length) return false;
+      if(q&&!names.some(n=>String(n).toLowerCase().includes(q))) return false;
+      if(rf){
+        let ok=names.some(n=>{
+          let role=getUserRole(n)||"";
+          if(rf==="__NONE__") return !role;
+          return String(role).toLowerCase()===String(rf).toLowerCase();
+        });
+        if(!ok) return false;
+      }
+      return true;
+    });
+  }
+  let byDate=new Map(); let noDate=0;
+  rows.forEach(row=>{
+    let dt=parseMotiTimestamp(motiTimestampOf(row.raw||{}));
+    if(!dt){ noDate++; return; }
+    let key=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+    byDate.set(key,(byDate.get(key)||0)+1);
+  });
+  let r=rankTsRange();
+  let start=null, end=null;
+  if(r.start) start=new Date(r.start); if(r.end) end=new Date(r.end);
+  if(!start||!end){
+    let keys=[...byDate.keys()].sort();
+    if(keys.length){ if(!start){ let p=keys[0].split("-"); start=new Date(+p[0],+p[1]-1,+p[2]); } if(!end){ let p=keys[keys.length-1].split("-"); end=new Date(+p[0],+p[1]-1,+p[2]); } }
+  }
+  let points=[];
+  if(start&&end){
+    let cur=new Date(start); cur.setHours(0,0,0,0); let endDay=new Date(end); endDay.setHours(0,0,0,0);
+    // Batasi 366 hari biar grafik tetap terbaca kalau rentang kebuka lebar
+    let guard=0;
+    while(cur.getTime()<=endDay.getTime()&&guard<366){
+      let key=cur.getFullYear()+"-"+String(cur.getMonth()+1).padStart(2,"0")+"-"+String(cur.getDate()).padStart(2,"0");
+      points.push({key:key,label:cur.toLocaleDateString("id-ID",{day:"numeric",month:"short"}),full:cur.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}),count:byDate.get(key)||0});
+      cur.setDate(cur.getDate()+1); guard++;
+    }
+  }
+  let total=points.reduce((a,p)=>a+p.count,0);
+  return {points:points,total:total,noDate:noDate,byDate:byDate,start:start,end:end};
+}
+function fmtRankDate(d){ try{ return d.toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}); }catch(e){ return String(d); } }
+function setRankTsPreset(preset){
+  let sEl=document.getElementById("rankTsStart"), eEl=document.getElementById("rankTsEnd");
+  if(!sEl||!eEl) return;
+  let today=new Date(); today.setHours(0,0,0,0);
+  let toVal=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  if(preset==="today"){ sEl.value=toVal(today); eEl.value=toVal(today); }
+  else if(preset==="7d"){ let st=new Date(today); st.setDate(st.getDate()-6); sEl.value=toVal(st); eEl.value=toVal(today); }
+  else if(preset==="30d"){ let st=new Date(today); st.setDate(st.getDate()-29); sEl.value=toVal(st); eEl.value=toVal(today); }
+  else { sEl.value=""; eEl.value=""; }
+  renderRankTeam();
+}
+function resetRankTsFilter(){
+  let sEl=document.getElementById("rankTsStart"), eEl=document.getElementById("rankTsEnd");
+  if(sEl) sEl.value=""; if(eEl) eEl.value="";
+  renderRankTeam();
+}
+function renderRankDailyChart(){
+  let sumEl=document.getElementById("rankDailySummary"), chartEl=document.getElementById("rankDailyChart"), noteEl=document.getElementById("rankDailyNote"), infoEl=document.getElementById("rankTsInfo");
+  if(!chartEl) return;
+  let s=rankDailySeries();
+  let r=rankTsRange();
+  // Info rentang + tombol preset aktif
+  try{
+    document.querySelectorAll("[data-ts-preset]").forEach(b=>{
+      let p=b.getAttribute("data-ts-preset");
+      let active=false;
+      if(p==="all"&&!r.has) active=true;
+      if(p==="today"&&r.start&&r.end&&r.startVal===r.endVal) active=true;
+      if(p==="7d"&&r.start&&r.end){ let diff=Math.round((r.end.getTime()-r.start.getTime())/86400000); if(diff===6) active=true; }
+      if(p==="30d"&&r.start&&r.end){ let diff=Math.round((r.end.getTime()-r.start.getTime())/86400000); if(diff===29) active=true; }
+      b.classList.toggle("active",active);
+    });
+  }catch(e){}
+  if(infoEl){
+    if(r.has){ let a=r.start?fmtRankDate(r.start):"awal"; let b2=r.end?fmtRankDate(r.end):"akhir"; infoEl.textContent="Filter Timestamp: "+a+" — "+b2+" • "+s.total+" input"; }
+    else infoEl.textContent="Semua tanggal • "+s.total+" input";
+  }
+  if(!s.points.length){
+    if(sumEl) sumEl.innerHTML="";
+    chartEl.innerHTML="<p class='small' style='text-align:center;padding:18px'>Tidak ada input pada rentang tanggal ini. Coba ubah filter tanggal atau cek kolom <b>Timestamp</b> di sheet MOTI.</p>";
+    if(noteEl) noteEl.textContent=s.noDate?("Ada "+s.noDate+" baris tanpa Timestamp — tidak masuk grafik. Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong)."):"Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong).";
+    return;
+  }
+  let max=Math.max(...s.points.map(p=>p.count),1);
+  let avg=s.points.length?(s.total/s.points.length):0;
+  let peak=s.points.reduce((a,b)=>b.count>a.count?b:a,s.points[0]);
+  if(sumEl){
+    sumEl.innerHTML="<div class='ds'><span>Total Input</span><b>"+s.total+"</b></div><div class='ds'><span>Rata-rata / hari</span><b>"+(Math.round(avg*10)/10)+"</b></div><div class='ds'><span>Hari tersibuk</span><b>"+peak.count+" input</b><span>"+peak.full+"</span></div><div class='ds'><span>Rentang</span><b>"+s.points.length+" hari</b><span>"+fmtRankDate(s.start)+" — "+fmtRankDate(s.end)+"</span></div>";
+  }
+  // SVG line chart
+  let W=720,H=260,PL=44,PR=12,PT=16,PB=36;
+  let iw=W-PL-PR, ih=H-PT-PB;
+  let x=i=>PL+(s.points.length<=1?iw/2:(i/(s.points.length-1))*iw);
+  let y=v=>PT+ih-(max?((v/max)*ih):0);
+  let pts=s.points.map((p,i)=>x(i).toFixed(1)+","+y(p.count).toFixed(1)).join(" ");
+  let area=""+PL+","+y(0)+" "+pts+" "+x(s.points.length-1)+","+y(0);
+  let step=Math.max(1,Math.ceil(s.points.length/10));
+  let xLabels=s.points.map((p,i)=>{
+    if(i%step!==0&&i!==s.points.length-1) return "";
+    return "<text x='"+x(i).toFixed(1)+"' y='"+(H-10)+"' text-anchor='middle' font-size='11' fill='#64748B'>"+p.label+"</text>";
+  }).join("");
+  let grid=""; let yTicks=4;
+  for(let t=0;t<=yTicks;t++){
+    let v=Math.round(max*t/yTicks); let yy=y(v);
+    grid+="<line x1='"+PL+"' y1='"+yy.toFixed(1)+"' x2='"+(W-PR)+"' y2='"+yy.toFixed(1)+"' stroke='#E5E7EB' stroke-width='1'/>"
+      +"<text x='"+(PL-6)+"' y='"+(yy+3).toFixed(1)+"' text-anchor='end' font-size='11' fill='#64748B'>"+v+"</text>";
+  }
+  let dots=s.points.map((p,i)=>{
+    let label=(s.points.length<=16||p.count===peak.count)?"<text x='"+x(i).toFixed(1)+"' y='"+(y(p.count)-8).toFixed(1)+"' text-anchor='middle' font-size='11' font-weight='700' fill='#7A0018'>"+p.count+"</text>":"";
+    return "<circle cx='"+x(i).toFixed(1)+"' cy='"+y(p.count).toFixed(1)+"' r='4' fill='#E30613' stroke='#fff' stroke-width='1.5'><title>"+p.full+" — "+p.count+" input</title></circle>"+label;
+  }).join("");
+  chartEl.innerHTML="<svg viewBox='0 0 "+W+" "+H+"' role='img' aria-label='Line chart input harian berdasarkan Timestamp'><defs><linearGradient id='rankDailyFill' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#E30613' stop-opacity='0.22'/><stop offset='100%' stop-color='#E30613' stop-opacity='0'/></linearGradient></defs>"+grid+"<polygon points='"+area+"' fill='url(#rankDailyFill)'/><polyline points='"+pts+"' fill='none' stroke='#E30613' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/>"+dots+xLabels+"</svg>";
+  if(noteEl) noteEl.textContent=(s.noDate?("Ada "+s.noDate+" baris tanpa Timestamp — tidak masuk grafik. "):"")+"Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong).";
+}
 function rankTeamMOTI(){
   let map=new Map();
-  (MOTI_ROWS||[]).forEach(row=>{
+  rankTsFilteredRows().forEach(row=>{
     let sid=String(row.id||"").trim(); if(!sid) return;
     let names=motiNamesFromRaw(row.raw||{});
     names.forEach(n=>{
@@ -479,11 +686,12 @@ function showRankDetail(name){
 function renderRankTeam(){
   let chart=document.getElementById("rankChart"), pod=document.getElementById("rankPodium"), body=document.getElementById("rankBody");
   if(!body) return;
+  try{ renderRankDailyChart(); }catch(e){}
   try{ buildRankRoleOptions(); }catch(e){}
   let list=rankTeamFilteredList();
   let mode=window._rankMode||"MOTI";
   if(!list.length){
-    if(chart) chart.innerHTML="<p class='small' style='text-align:center;padding:12px'>Belum ada nama di sheet MOTI — pastikan ada kolom <b>Input By</b> / Nama / Auditor di sheet MOTI dan sudah terisi.</p>";
+    if(chart) chart.innerHTML="<p class='small' style='text-align:center;padding:12px'>Belum ada nama di sheet MOTI pada rentang Timestamp ini — coba ubah filter tanggal di Input Harian atau pastikan ada kolom <b>Input By</b> / Nama / Auditor di sheet MOTI dan sudah terisi.</p>";
     if(pod) pod.innerHTML="";
     body.innerHTML="<tr><td colspan=\"10\" style=\"text-align:center;padding:20px\">Belum ada data Rank Team.</td></tr>";
 
@@ -1622,7 +1830,7 @@ function openD(id){let d=enriched().find(x=>x.id===id);if(!d)return;let S=RAW.SI
   let catatan=g(M,"Catatan")!=="—"?g(M,"Catatan"):"";let remark=g(S,"Remark")!=="—"?g(S,"Remark"):"";
   mTitle.textContent=d.id+" — "+d.name;
   mBody.innerHTML=warn
-  +sec("A. Identitas Site",[["Site ID",d.id],["Site Name",d.name],["Class",d.cls],["Kabupaten",d.kab],["BCP",d.bcp],["PIC TE",(d.te&&d.te.length?d.te.join(", "):"—")],["PIC MBP",(d.mbp&&d.mbp.length?d.mbp.join(", "):"—")],["BCP Raw",g(S,"BCP")],["Cluster",g(M,"Cluster")],["Tanggal Audit Terbaru",latestMotiTanggal(d.id,M)],["Input By",g(M,"Input By")],["Date Update",g(S,"Date Update")],["Jumlah Rectifier",g(M,"Jumlah Rectifier")]])
+  +sec("A. Identitas Site",[["Site ID",d.id],["Site Name",d.name],["Class",d.cls],["Kabupaten",d.kab],["BCP",d.bcp],["PIC TE",(d.te&&d.te.length?d.te.join(", "):"—")],["PIC MBP",(d.mbp&&d.mbp.length?d.mbp.join(", "):"—")],["Cluster",g(M,"Cluster")],["Input By",g(M,"Input By")],["Jumlah Rectifier",g(M,"Jumlah Rectifier")]])
   +sec("B. Rectifier 1",[["Tipe",g(M,"Rect1 Tipe")],["Modul OK / NOK",g(M,"Rect1 Modul OK")+" / "+g(M,"Rect1 Modul NOK")],["Load Current",g(M,"Rect1 Load Current")],["Load Current",g(B,"Rect1 Load Current")],["Work Mode",g(M,"Rect1 Work Mode")],["Bus Voltage",g(M,"Rect1 Bus Voltage")],["LVD Prio / Non Prio",g(M,"Rect1 LVD Prio")+" / "+g(M,"Rect1 LVD Non Prio")],["BBT",(d.audit?(d.b1jam+" jam • "+d.b1):"—")],["Cap / Coef",g(B,"Rect1 Cap")+" / "+g(B,"Rec1 Cap Coef")]])
   +sec("C. Rectifier 2",[["Tipe",g(M,"Rect2 Tipe")],["Modul OK / NOK",g(M,"Rect2 Modul OK")+" / "+g(M,"Rect2 Modul NOK")],["Load Current",g(M,"Rect2 Load Current")],["Load Current",g(B,"Rect2 Load Current")],["Work Mode",g(M,"Rect2 Work Mode")],["Bus Voltage",g(M,"Rect2 Bus Voltage")],["BBT",(d.audit?(d.b2jam+" jam • "+d.b2):"—")],["Cap",g(B,"Rect2 Cap")]])
   +sec("D. Rectifier 3",[["Tipe",g(M,"Rect3 Tipe")],["Battery OK / NOK",g(M,"Rect3 Battery OK")+" / "+g(M,"Rect3 Battery NOK")],["Modul OK / NOK",g(M,"Rect3 Modul OK")+" / "+g(M,"Rect3 Modul NOK")],["Load Current",g(M,"Rect3 Load Current")],["Work Mode",g(M,"Rect3 Work Mode")]])
