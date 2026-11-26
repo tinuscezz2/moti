@@ -233,6 +233,9 @@ html[data-theme="dark"] .role-badge{background:#2A3040;color:#CBD5E1}
 .rank-daily-summary .ds b{font-size:18px;display:block;line-height:1.2}
 .rank-daily-chart{overflow:auto}
 .rank-daily-chart svg{width:100%;min-width:560px;height:auto;display:block}
+.rank-daily-chart circle{cursor:pointer}
+.rank-daily-chart text.rank-daily-count{cursor:pointer}
+.rank-daily-chart circle:hover{stroke:#7A0018;stroke-width:2.5}
 html[data-theme="dark"] .rank-daily-wrap{background:#1E222B;border-color:#2A3040}
 html[data-theme="dark"] .rank-daily-filter input[type="date"]{background:#151922;border-color:#2A3040;color:#E6E8EC}
 html[data-theme="dark"] .rank-ts-btn{background:#151922;border-color:#2A3040;color:#E6E8EC}
@@ -342,24 +345,15 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <h3 style="margin:14px 0 6px">📊 Grafik (Top 10)</h3>
 <div id="rankChart" class="rank-chart"></div>
 <div id="rankDailyWrap" class="rank-daily-wrap">
-<h3 style="margin:0">📈 Input Harian — Berdasarkan Timestamp</h3>
-<p class="small" style="margin:6px 0 0">Satu titik = jumlah baris MOTI yang masuk di tanggal itu. Filter tanggal di bawah juga memfilter Rank (Podium, Grafik Top 10, dan Tabel) di halaman ini.</p>
+<h3 style="margin:0">📈 Trend Daily Audit</h3>
 <div class="rank-daily-filter">
 <label>Dari <input type="date" id="rankTsStart" onchange="renderRankTeam()"></label>
 <label>Sampai <input type="date" id="rankTsEnd" onchange="renderRankTeam()"></label>
 <button type="button" class="rank-ts-btn primary" onclick="renderRankTeam()">Terapkan</button>
 <button type="button" class="rank-ts-btn" onclick="resetRankTsFilter()">Reset</button>
 </div>
-<div class="rank-daily-filter" style="margin-top:0">
-<button type="button" class="rank-ts-btn" data-ts-preset="today" onclick="setRankTsPreset('today')">Hari Ini</button>
-<button type="button" class="rank-ts-btn" data-ts-preset="7d" onclick="setRankTsPreset('7d')">7 Hari Terakhir</button>
-<button type="button" class="rank-ts-btn" data-ts-preset="30d" onclick="setRankTsPreset('30d')">30 Hari Terakhir</button>
-<button type="button" class="rank-ts-btn" data-ts-preset="all" onclick="setRankTsPreset('all')">Semua</button>
-<span id="rankTsInfo" class="small" style="margin-left:4px"></span>
-</div>
-<div id="rankDailySummary" class="rank-daily-summary"></div>
 <div id="rankDailyChart" class="rank-daily-chart"></div>
-<p id="rankDailyNote" class="small" style="margin:8px 0 0;color:#64748B"></p>
+<div id="rankDailyDetail" class="rank-detail" style="display:none"><h3 id="rankDailyDetailTitle" style="margin:0 0 8px"></h3><div id="rankDailyDetailBody" style="overflow:auto"></div><button type="button" class="sec" onclick="document.getElementById('rankDailyDetail').style.display='none'">Tutup Detail</button></div>
 </div>
 <div id="rankDetail" class="rank-detail" style="display:none"><h3 id="rankDetailTitle" style="margin:0 0 8px"></h3><div id="rankDetailBody" style="overflow:auto"></div><button type="button" class="sec" onclick="document.getElementById('rankDetail').style.display='none'">Tutup Detail</button></div>
 <div class="rank-table"><table><thead><tr><th>Rank</th><th style="text-align:left">Nama</th><th>Role</th><th>Site ID Unik<br>Teraudit</th><th>Baris MOTI</th><th>Duplikat<br>(tidak dihitung)</th><th>&gt;4 Jam</th><th>3–4 Jam</th><th>1–2 Jam</th><th>Tidak Ada</th></tr></thead><tbody id="rankBody"></tbody></table></div>
@@ -547,40 +541,58 @@ function resetRankTsFilter(){
   if(sEl) sEl.value=""; if(eEl) eEl.value="";
   renderRankTeam();
 }
+function showRankDailyDetail(dateKey){
+  let wrap=document.getElementById("rankDailyDetail"), title=document.getElementById("rankDailyDetailTitle"), body=document.getElementById("rankDailyDetailBody");
+  if(!wrap||!title||!body) return;
+  // Ambil baris MOTI untuk tanggal itu — pakai filter yang sama dengan chart (Timestamp range + nama/role)
+  let rows=rankTsFilteredRows();
+  let q=""; try{ q=String(document.getElementById("rankSearch")?.value||"").trim().toLowerCase(); }catch(e){}
+  let rf=""; try{ rf=String(document.getElementById("rankRoleFilter")?.value||""); }catch(e){}
+  let list=[];
+  rows.forEach(row=>{
+    let dt=parseMotiTimestamp(motiTimestampOf(row.raw||{}));
+    if(!dt) return;
+    let key=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+    if(key!==dateKey) return;
+    let names=motiNamesFromRaw(row.raw||{});
+    if(q&&!names.some(n=>String(n).toLowerCase().includes(q))) return;
+    if(rf){
+      let ok=names.some(n=>{ let role=getUserRole(n)||""; if(rf==="__NONE__") return !role; return String(role).toLowerCase()===String(rf).toLowerCase(); });
+      if(!ok) return;
+    }
+    list.push({row:row,dt:dt,names:names});
+  });
+  let dParts=dateKey.split("-");
+  let fullDate=""; try{ fullDate=new Date(+dParts[0],+dParts[1]-1,+dParts[2]).toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}); }catch(e){ fullDate=dateKey; }
+  let byId=new Map(); try{ enriched().forEach(d=>byId.set(String(d.id).trim(),d)); }catch(e){}
+  let esc=v=>String(v==null?"":v).replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  title.textContent="Detail — "+fullDate+" • "+list.length+" input";
+  if(!list.length){
+    body.innerHTML="<p class='small'>Tidak ada site yang teraudit pada tanggal ini.</p>";
+  } else {
+    body.innerHTML="<div style='overflow:auto;max-height:340px'><table><thead><tr><th>Site ID</th><th>Site Name</th><th>Auditor</th><th>Timestamp</th></tr></thead><tbody>"+list.map(it=>{
+      let sid=String(it.row.id||"").trim();
+      let d=byId.get(sid);
+      let nm=d?d.name:"—";
+      let auditor=it.names.length?it.names.join(", "):"—";
+      let ts=motiTimestampOf(it.row.raw||{})||"—";
+      return "<tr><td><a href='#' onclick=\"openD('"+esc(sid)+"');return false\"><b>"+esc(sid)+"</b></a></td><td>"+esc(nm)+"</td><td>"+esc(auditor)+"</td><td>"+esc(ts)+"</td></tr>";
+    }).join("")+"</tbody></table></div><p class='small' style='margin-top:8px'>Klik Site ID untuk buka Detail Site.</p>";
+  }
+  wrap.style.display="block";
+  wrap.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 function renderRankDailyChart(){
-  let sumEl=document.getElementById("rankDailySummary"), chartEl=document.getElementById("rankDailyChart"), noteEl=document.getElementById("rankDailyNote"), infoEl=document.getElementById("rankTsInfo");
+  let chartEl=document.getElementById("rankDailyChart");
   if(!chartEl) return;
   let s=rankDailySeries();
-  let r=rankTsRange();
-  // Info rentang + tombol preset aktif
-  try{
-    document.querySelectorAll("[data-ts-preset]").forEach(b=>{
-      let p=b.getAttribute("data-ts-preset");
-      let active=false;
-      if(p==="all"&&!r.has) active=true;
-      if(p==="today"&&r.start&&r.end&&r.startVal===r.endVal) active=true;
-      if(p==="7d"&&r.start&&r.end){ let diff=Math.round((r.end.getTime()-r.start.getTime())/86400000); if(diff===6) active=true; }
-      if(p==="30d"&&r.start&&r.end){ let diff=Math.round((r.end.getTime()-r.start.getTime())/86400000); if(diff===29) active=true; }
-      b.classList.toggle("active",active);
-    });
-  }catch(e){}
-  if(infoEl){
-    if(r.has){ let a=r.start?fmtRankDate(r.start):"awal"; let b2=r.end?fmtRankDate(r.end):"akhir"; infoEl.textContent="Filter Timestamp: "+a+" — "+b2+" • "+s.total+" input"; }
-    else infoEl.textContent="Semua tanggal • "+s.total+" input";
-  }
   if(!s.points.length){
-    if(sumEl) sumEl.innerHTML="";
     chartEl.innerHTML="<p class='small' style='text-align:center;padding:18px'>Tidak ada input pada rentang tanggal ini. Coba ubah filter tanggal atau cek kolom <b>Timestamp</b> di sheet MOTI.</p>";
-    if(noteEl) noteEl.textContent=s.noDate?("Ada "+s.noDate+" baris tanpa Timestamp — tidak masuk grafik. Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong)."):"Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong).";
     return;
   }
   let max=Math.max(...s.points.map(p=>p.count),1);
-  let avg=s.points.length?(s.total/s.points.length):0;
   let peak=s.points.reduce((a,b)=>b.count>a.count?b:a,s.points[0]);
-  if(sumEl){
-    sumEl.innerHTML="<div class='ds'><span>Total Input</span><b>"+s.total+"</b></div><div class='ds'><span>Rata-rata / hari</span><b>"+(Math.round(avg*10)/10)+"</b></div><div class='ds'><span>Hari tersibuk</span><b>"+peak.count+" input</b><span>"+peak.full+"</span></div><div class='ds'><span>Rentang</span><b>"+s.points.length+" hari</b><span>"+fmtRankDate(s.start)+" — "+fmtRankDate(s.end)+"</span></div>";
-  }
-  // SVG line chart
+  // SVG line chart — titik & angka bisa diklik untuk lihat list teraudit hari itu
   let W=720,H=260,PL=44,PR=12,PT=16,PB=36;
   let iw=W-PL-PR, ih=H-PT-PB;
   let x=i=>PL+(s.points.length<=1?iw/2:(i/(s.points.length-1))*iw);
@@ -599,11 +611,10 @@ function renderRankDailyChart(){
       +"<text x='"+(PL-6)+"' y='"+(yy+3).toFixed(1)+"' text-anchor='end' font-size='11' fill='#64748B'>"+v+"</text>";
   }
   let dots=s.points.map((p,i)=>{
-    let label=(s.points.length<=16||p.count===peak.count)?"<text x='"+x(i).toFixed(1)+"' y='"+(y(p.count)-8).toFixed(1)+"' text-anchor='middle' font-size='11' font-weight='700' fill='#7A0018'>"+p.count+"</text>":"";
-    return "<circle cx='"+x(i).toFixed(1)+"' cy='"+y(p.count).toFixed(1)+"' r='4' fill='#E30613' stroke='#fff' stroke-width='1.5'><title>"+p.full+" — "+p.count+" input</title></circle>"+label;
+    let label=(s.points.length<=16||p.count===peak.count)?"<text class='rank-daily-count' onclick=\"showRankDailyDetail('"+p.key+"')\" x='"+x(i).toFixed(1)+"' y='"+(y(p.count)-8).toFixed(1)+"' text-anchor='middle' font-size='11' font-weight='700' fill='#7A0018'><title>"+p.full+" — "+p.count+" input. Klik untuk lihat list.</title>"+p.count+"</text>":"";
+    return "<circle onclick=\"showRankDailyDetail('"+p.key+"')\" cx='"+x(i).toFixed(1)+"' cy='"+y(p.count).toFixed(1)+"' r='4' fill='#E30613' stroke='#fff' stroke-width='1.5'><title>"+p.full+" — "+p.count+" input. Klik untuk lihat list.</title></circle>"+label;
   }).join("");
-  chartEl.innerHTML="<svg viewBox='0 0 "+W+" "+H+"' role='img' aria-label='Line chart input harian berdasarkan Timestamp'><defs><linearGradient id='rankDailyFill' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#E30613' stop-opacity='0.22'/><stop offset='100%' stop-color='#E30613' stop-opacity='0'/></linearGradient></defs>"+grid+"<polygon points='"+area+"' fill='url(#rankDailyFill)'/><polyline points='"+pts+"' fill='none' stroke='#E30613' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/>"+dots+xLabels+"</svg>";
-  if(noteEl) noteEl.textContent=(s.noDate?("Ada "+s.noDate+" baris tanpa Timestamp — tidak masuk grafik. "):"")+"Tanggal diambil dari kolom Timestamp di MOTI (fallback ke Tanggal kalau Timestamp kosong).";
+  chartEl.innerHTML="<svg viewBox='0 0 "+W+" "+H+"' role='img' aria-label='Line chart Trend Daily Audit'><defs><linearGradient id='rankDailyFill' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#E30613' stop-opacity='0.22'/><stop offset='100%' stop-color='#E30613' stop-opacity='0'/></linearGradient></defs>"+grid+"<polygon points='"+area+"' fill='url(#rankDailyFill)'/><polyline points='"+pts+"' fill='none' stroke='#E30613' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/>"+dots+xLabels+"</svg><p class='small' style='margin:6px 0 0;color:#64748B'>Klik titik / angka di grafik untuk lihat list yang teraudit pada hari itu.</p>";
 }
 function rankTeamMOTI(){
   let map=new Map();
