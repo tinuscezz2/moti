@@ -194,7 +194,7 @@ html[data-theme="light"] .pic-chip{background:#fff;border-color:#E2E8F0}
 .rank-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .rank-tabs button{padding:8px 16px;border-radius:999px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-weight:700;font-size:13px}
 .rank-tabs button.active{background:linear-gradient(135deg,#E30613,#7A0018);color:#fff;border-color:#7A0018}
-.rank-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+.rank-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 20px}
 .rank-podium .pod{border:1px solid #E5E7EB;border-radius:14px;padding:14px;text-align:center;background:linear-gradient(180deg,#fff,#FFF5F5);cursor:pointer}
 .rank-podium .pod.gold{border-color:#FFB800;background:linear-gradient(180deg,#FFFBEB,#FFF5F5)}
 .rank-podium .pod b{font-size:16px;display:block}
@@ -212,7 +212,7 @@ html[data-theme="dark"] .rank-tabs button{background:#1E222B;border-color:#2A304
 html[data-theme="dark"] .rank-podium .pod{background:#1E222B;border-color:#2A3040}
 html[data-theme="dark"] .rank-table th{background:#1E222B}
 html[data-theme="dark"] .rank-table tr:hover td{background:#262C3A}
-.rank-filter-row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.rank-filter-row{display:flex;gap:10px;align-items:center;margin:8px 0 4px}
 .rank-filter-row .rank-search{flex:1;width:auto;margin:0}
 .rank-role-select{flex:none;width:190px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;background:#fff;cursor:pointer;font-weight:700}
 .rank-search{width:100%;padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;margin:8px 0}
@@ -322,9 +322,9 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <div class="wrap" id="viewRankTeam" style="display:none">
 <div class="card"><h2>🏆 RANK TEAM — Peringkat Auditor MOTI</h2><p class="small" id="rankSourceLabel">Rank dari nama di sheet MOTI (kolom <b>Input By</b> / Nama / Auditor). Hitung <b>Site ID unik</b> yang teraudit — duplikasi Site ID tidak dihitung. Klik bar / nama untuk lihat daftar Site ID-nya.</p>
 <div class="rank-filter-row"><input id="rankSearch" class="rank-search" placeholder="Cari nama auditor…" oninput="renderRankTeam()"><select id="rankRoleFilter" class="rank-role-select" onchange="renderRankTeam()"><option value="">Semua Role</option><option value="__NONE__">Tanpa Role</option></select></div>
+<div id="rankPodium" class="rank-podium"></div>
 <h3 style="margin:14px 0 6px">📊 Grafik — Site ID Unik Teraudit (Top 10)</h3>
 <div id="rankChart" class="rank-chart"></div>
-<div id="rankPodium" class="rank-podium"></div>
 <div id="rankDetail" class="rank-detail" style="display:none"><h3 id="rankDetailTitle" style="margin:0 0 8px"></h3><div id="rankDetailBody" style="overflow:auto"></div><button type="button" class="sec" onclick="document.getElementById('rankDetail').style.display='none'">Tutup Detail</button></div>
 <div class="rank-table"><table><thead><tr><th>Rank</th><th style="text-align:left">Nama</th><th>Role</th><th>Site ID Unik<br>Teraudit</th><th>Baris MOTI</th><th>Duplikat<br>(tidak dihitung)</th><th>&gt;4 Jam</th><th>3–4 Jam</th><th>1–2 Jam</th><th>Tidak Ada</th></tr></thead><tbody id="rankBody"></tbody></table></div>
 <p class="small" id="rankNote"></p>
