@@ -236,7 +236,7 @@ html[data-theme="dark"] .role-badge{background:#2A3040;color:#CBD5E1}
 .rank-daily-chart circle{cursor:pointer}
 /* ===== MAPS ===== */
 .maps-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-.maps-filter-row input,.maps-filter-row select{flex:1;min-width:150px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;background:#fff}
+.maps-filter-row input,.maps-filter-row select,.maps-filter-row .mdrop{flex:1;min-width:150px}.maps-filter-row input,.maps-filter-row select{padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;background:#fff}.maps-filter-row .mdrop-btn{padding:10px 12px;border:1px solid #E5E7EB;border-radius:10px;font-size:13px;font-weight:700}.maps-filter-row .mdrop-panel{z-index:80}
 .maps-filter-row select{cursor:pointer;font-weight:700}
 #mapsLeaflet{height:520px;border-radius:14px;border:1px solid #E5E7EB;overflow:hidden;background:#E8EEF2;z-index:1}
 .maps-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:10px 0}
@@ -304,7 +304,7 @@ html[data-theme="light"] .pic-box{background:#F8FAFC;border-color:#E2E8F0}
 <!-- ================= MAPS ================= -->
 <div class="wrap" id="viewMaps" style="display:none">
 <div class="card"><h2>🗺️ MAPS</h2>
-<div class="maps-filter-row"><input id="mapsSearch" placeholder="Cari Site ID / Nama…" oninput="renderMaps()"><select id="mapsKab" onchange="renderMaps()"><option value="">Semua Kabupaten</option></select><select id="mapsClass" onchange="renderMaps()"><option value="">Semua Class</option></select><select id="mapsBcp" onchange="renderMaps()"><option value="">Semua BCP</option><option value="Ya">BCP Ya</option><option value="Tidak">BCP Tidak</option><option value="Belum Diisi">BCP Belum Diisi</option></select><select id="mapsB1" onchange="renderMaps()"><option value="">Semua Backup R1</option><option value="Backup Time diatas 4 Jam">&gt;4 Jam</option><option value="Backup Time 3-4 Jam">3–4 Jam</option><option value="Backup Time 1-2 Jam">1–2 Jam</option><option value="Tidak Ada Backup Time">Tidak Ada</option><option value="Belum Ada Data BBT">Belum Ada Data BBT</option></select><select id="mapsAudit" onchange="renderMaps()"><option value="">Semua Site</option><option value="audit">Sudah Audit</option><option value="belum">Belum Audit</option></select></div>
+<div class="maps-filter-row"><input id="mapsSearch" placeholder="Cari Site ID / Nama…" oninput="renderMaps()"><div class="mdrop" id="mapsDropKab"><button type="button" class="mdrop-btn" onclick="toggleDrop(event,'mapsDropKab')"><span id="mapsKabLabel">Semua Kabupaten</span><span>▾</span></button><div class="mdrop-panel" id="mapsKabPanel"></div></div><div class="mdrop" id="mapsDropClass"><button type="button" class="mdrop-btn" onclick="toggleDrop(event,'mapsDropClass')"><span id="mapsClassLabel">Semua Class</span><span>▾</span></button><div class="mdrop-panel" id="mapsClassPanel"></div></div><div class="mdrop" id="mapsDropBcp"><button type="button" class="mdrop-btn" onclick="toggleDrop(event,'mapsDropBcp')"><span id="mapsBcpLabel">Semua BCP</span><span>▾</span></button><div class="mdrop-panel" id="mapsBcpPanel"></div></div><div class="mdrop" id="mapsDropB1"><button type="button" class="mdrop-btn" onclick="toggleDrop(event,'mapsDropB1')"><span id="mapsB1Label">Semua Backup R1</span><span>▾</span></button><div class="mdrop-panel" id="mapsB1Panel"></div></div><div class="mdrop" id="mapsDropAudit"><button type="button" class="mdrop-btn" onclick="toggleDrop(event,'mapsDropAudit')"><span id="mapsAuditLabel">Semua Site</span><span>▾</span></button><div class="mdrop-panel" id="mapsAuditPanel"></div></div></div>
 <div class="maps-legend"><span><i style="background:#0B6E4F"></i>&gt;4 Jam</span><span><i style="background:#FFB800"></i>3–4 Jam</span><span><i style="background:#E30613"></i>1–2 Jam</span><span><i style="background:#64748B"></i>Tidak Ada</span><span id="mapsCount" class="small" style="margin-left:auto"></span></div>
 <div id="mapsLeaflet"></div>
 <p class="small" style="margin:8px 0 0;color:#64748B" id="mapsNote">Klik pin untuk lihat detail site.</p>
@@ -919,22 +919,45 @@ function mapsColorFor(d){
   if(d.b1==="Tidak Ada Backup Time") return "#64748B";
   return "#CBD5E1";
 }
+let selMapsKab=new Set(), selMapsClass=new Set(), selMapsBcp=new Set(), selMapsB1=new Set(), selMapsAudit=new Set();
+function mapsSetOf(kind){ return kind==="kab"?selMapsKab : kind==="cls"?selMapsClass : kind==="bcp"?selMapsBcp : kind==="b1"?selMapsB1 : selMapsAudit; }
+function mapsAllOf(kind){ return kind==="kab"?"Semua Kabupaten" : kind==="cls"?"Semua Class" : kind==="bcp"?"Semua BCP" : kind==="b1"?"Semua Backup R1" : "Semua Site"; }
+function mapsLabelOf(kind){ return kind==="kab"?"mapsKabLabel" : kind==="cls"?"mapsClassLabel" : kind==="bcp"?"mapsBcpLabel" : kind==="b1"?"mapsB1Label" : "mapsAuditLabel"; }
+function mapsDispOf(kind,v){
+  if(kind==="bcp") return "BCP "+v;
+  if(kind==="audit") return v==="audit"?"Sudah Audit":"Belum Audit";
+  if(kind==="b1"){ if(v==="Backup Time diatas 4 Jam") return ">4 Jam"; if(v==="Backup Time 3-4 Jam") return "3–4 Jam"; if(v==="Backup Time 1-2 Jam") return "1–2 Jam"; if(v==="Tidak Ada Backup Time") return "Tidak Ada"; return v; }
+  return String(v);
+}
+function mapsBuildPanel(panelId, values, kind){
+  let selSet=mapsSetOf(kind); let panel=document.getElementById(panelId); if(!panel) return;
+  let all=`<label class="mdrop-opt mdrop-all"><input type="checkbox" ${selSet.size===0?"checked":""} onchange="mapsPickAll('${kind}',this)"> ${mapsAllOf(kind)}</label>`;
+  panel.innerHTML=all+values.map(v=>`<label class="mdrop-opt"><input type="checkbox" ${selSet.has(v)?"checked":""} onchange="mapsPickOne('${kind}',this,'${String(v).replace(/'/g,"\\'")}')"> ${String(mapsDispOf(kind,v)).replace(/</g,"&lt;")}</label>`).join("");
+}
+function mapsBuildFilters(){
+  let all=[]; try{ all=enriched(); }catch(e){ all=[]; }
+  let kabs=[...new Set(all.map(d=>String(d.kab||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id-ID"));
+  let clss=[...new Set(all.map(d=>String(d.cls||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id-ID"));
+  mapsBuildPanel("mapsKabPanel", kabs, "kab");
+  mapsBuildPanel("mapsClassPanel", clss, "cls");
+  mapsBuildPanel("mapsBcpPanel", ["Ya","Tidak","Belum Diisi"], "bcp");
+  mapsBuildPanel("mapsB1Panel", ["Backup Time diatas 4 Jam","Backup Time 3-4 Jam","Backup Time 1-2 Jam","Tidak Ada Backup Time","Belum Ada Data BBT"], "b1");
+  mapsBuildPanel("mapsAuditPanel", ["audit","belum"], "audit");
+  ["kab","cls","bcp","b1","audit"].forEach(k=>{ let el=document.getElementById(mapsLabelOf(k)); if(el){ let st=mapsSetOf(k); el.textContent=st.size?[...st].map(v=>mapsDispOf(k,v)).join(", "):mapsAllOf(k); } });
+}
+function mapsPickAll(kind, el){ let st=mapsSetOf(kind); if(el.checked){ st.clear(); mapsBuildFilters(); renderMaps(); } else { el.checked=true; } }
+function mapsPickOne(kind, el, val){ let st=mapsSetOf(kind); if(el.checked) st.add(val); else st.delete(val); mapsBuildFilters(); renderMaps(); }
 function mapsFiltered(){
   let list=[]; try{ list=enriched(); }catch(e){ list=[]; }
   let q=""; try{ q=String(document.getElementById("mapsSearch")?.value||"").trim().toLowerCase(); }catch(e){}
-  let kab=""; try{ kab=String(document.getElementById("mapsKab")?.value||""); }catch(e){}
-  let cls=""; try{ cls=String(document.getElementById("mapsClass")?.value||""); }catch(e){}
-  let bcp=""; try{ bcp=String(document.getElementById("mapsBcp")?.value||""); }catch(e){}
-  let b1=""; try{ b1=String(document.getElementById("mapsB1")?.value||""); }catch(e){}
-  let au=""; try{ au=String(document.getElementById("mapsAudit")?.value||""); }catch(e){}
   return list.filter(d=>{
     if(q&&!(String(d.id||"").toLowerCase().includes(q)||String(d.name||"").toLowerCase().includes(q))) return false;
-    if(kab&&String(d.kab||"")!==kab) return false;
-    if(cls&&String(d.cls||"")!==cls) return false;
-    if(bcp&&String(d.bcp||"")!==bcp) return false;
-    if(b1&&String(d.b1||"")!==b1) return false;
-    if(au==="audit"&&!d.audit) return false;
-    if(au==="belum"&&d.audit) return false;
+    if(selMapsKab.size&&!selMapsKab.has(String(d.kab||""))) return false;
+    if(selMapsClass.size&&!selMapsClass.has(String(d.cls||""))) return false;
+    if(selMapsBcp.size&&!selMapsBcp.has(String(d.bcp||""))) return false;
+    if(selMapsB1.size&&!selMapsB1.has(String(d.b1||""))) return false;
+    if(selMapsAudit.size===1&&selMapsAudit.has("audit")&&!d.audit) return false;
+    if(selMapsAudit.size===1&&selMapsAudit.has("belum")&&d.audit) return false;
     return true;
   });
 }
@@ -951,24 +974,7 @@ function ensureLeaflet(){
   });
 }
 function renderMaps(){
-  // Dropdown Class
-  try{
-    let selC=document.getElementById("mapsClass"); if(selC){
-      let curC=selC.value||"";
-      let clss=[...new Set(enriched().map(d=>String(d.cls||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id-ID"));
-      selC.innerHTML="<option value=''>Semua Class</option>"+clss.map(k=>"<option value='"+String(k).replace(/'/g,"\\'").replace(/"/g,"&quot;")+"'>"+String(k).replace(/</g,"&lt;")+"</option>").join("");
-      if(curC&&clss.includes(curC)) selC.value=curC;
-    }
-  }catch(e){}
-  // Dropdown Kabupaten
-  try{
-    let sel=document.getElementById("mapsKab"); if(sel){
-      let cur=sel.value||"";
-      let kabs=[...new Set(enriched().map(d=>String(d.kab||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id-ID"));
-      sel.innerHTML="<option value=''>Semua Kabupaten</option>"+kabs.map(k=>"<option value='"+String(k).replace(/'/g,"\\'").replace(/"/g,"&quot;")+"'>"+String(k).replace(/</g,"&lt;")+"</option>").join("");
-      if(cur&&kabs.includes(cur)) sel.value=cur;
-    }
-  }catch(e){}
+  mapsBuildFilters();
   let list=mapsFiltered();
   let cnt=document.getElementById("mapsCount"); if(cnt) cnt.textContent=list.length+" site";
   let note=document.getElementById("mapsNote");
